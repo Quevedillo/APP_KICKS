@@ -158,6 +158,69 @@ class AdminDashboard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 32),
+          
+          // Quick Email Access Section
+          Text(
+            'Acceso Rápido a Correos',
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: Colors.amber,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: _buildEmailQuickAccessCard(
+                  context,
+                  icon: Icons.shopping_cart,
+                  title: 'Correos de Compras',
+                  description: 'Confirmación de pedidos',
+                  color: Colors.green,
+                  onTap: () {
+                    // Navegar a la sección de emails de compras
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Abriendo correos de compras...')),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _buildEmailQuickAccessCard(
+                  context,
+                  icon: Icons.cancel,
+                  title: 'Correos de Cancelación',
+                  description: 'Cancelaciones y reembolsos',
+                  color: Colors.red,
+                  onTap: () {
+                    // Navegar a la sección de emails de cancelación
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Abriendo correos de cancelación...')),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _buildEmailQuickAccessCard(
+                  context,
+                  icon: Icons.update,
+                  title: 'Actualizaciones de Pedido',
+                  description: 'Estado del pedido',
+                  color: Colors.orange,
+                  onTap: () {
+                    // Navegar a la sección de actualizaciones
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Abriendo actualizaciones de pedido...')),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 32),
+          
           Text(
             'Actividad Reciente',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
@@ -183,6 +246,52 @@ class AdminDashboard extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildEmailQuickAccessCard(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required String description,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          border: Border.all(color: color, width: 2),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 40, color: color),
+            const SizedBox(height: 12),
+            Text(
+              title,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+                color: color,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              description,
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey[400],
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
       ),
     );
   }

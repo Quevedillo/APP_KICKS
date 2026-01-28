@@ -12,6 +12,7 @@ class ProfileScreen extends ConsumerWidget {
     final user = ref.watch(userProvider);
     final profileAsync = ref.watch(userProfileProvider);
     final isLoggedIn = ref.watch(isLoggedInProvider);
+    final isAdmin = user?.email == 'joseluisgq17@gmail.com'; // Simple admin check
 
     if (!isLoggedIn) {
       return Scaffold(
@@ -151,6 +152,17 @@ class ProfileScreen extends ConsumerWidget {
               label: 'Explorar Productos',
               onTap: () => context.go('/'),
             ),
+
+            // Admin access button
+            if (isAdmin) ...[
+              const SizedBox(height: 16),
+              _ActionButton(
+                icon: Icons.admin_panel_settings,
+                label: 'Panel de Administrador',
+                onTap: () => context.push('/admin'),
+                isAdmin: true,
+              ),
+            ],
 
             const SizedBox(height: 24),
 
@@ -344,11 +356,13 @@ class _ActionButton extends StatelessWidget {
   final IconData icon;
   final String label;
   final VoidCallback onTap;
+  final bool isAdmin;
 
   const _ActionButton({
     required this.icon,
     required this.label,
     required this.onTap,
+    this.isAdmin = false,
   });
 
   @override
@@ -356,7 +370,9 @@ class _ActionButton extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       child: Material(
-        color: Theme.of(context).colorScheme.surface,
+        color: isAdmin 
+            ? Colors.red.withOpacity(0.15)
+            : Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
         child: InkWell(
           onTap: onTap,
@@ -365,12 +381,20 @@ class _ActionButton extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             child: Row(
               children: [
-                Icon(icon, color: Theme.of(context).primaryColor),
+                Icon(
+                  icon,
+                  color: isAdmin
+                      ? Colors.red
+                      : Theme.of(context).primaryColor,
+                ),
                 const SizedBox(width: 16),
                 Expanded(
                   child: Text(
                     label,
-                    style: const TextStyle(fontWeight: FontWeight.w500),
+                    style: TextStyle(
+                      fontWeight: FontWeight.w500,
+                      color: isAdmin ? Colors.red : Colors.white,
+                    ),
                   ),
                 ),
                 const Icon(Icons.chevron_right, color: Colors.grey),
