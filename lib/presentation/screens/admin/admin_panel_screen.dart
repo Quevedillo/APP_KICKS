@@ -12,73 +12,89 @@ class AdminPanelScreen extends ConsumerStatefulWidget {
 class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
   int _selectedIndex = 0;
 
+  final List<_AdminSection> _sections = [
+    _AdminSection(icon: Icons.dashboard, label: 'Dashboard'),
+    _AdminSection(icon: Icons.shopping_bag, label: 'Pedidos'),
+    _AdminSection(icon: Icons.inventory, label: 'Productos'),
+    _AdminSection(icon: Icons.people, label: 'Usuarios'),
+    _AdminSection(icon: Icons.email, label: 'Emails'),
+    _AdminSection(icon: Icons.bar_chart, label: 'Reportes'),
+    _AdminSection(icon: Icons.settings, label: 'Configuración'),
+  ];
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('🎛️ Panel de Administrador'),
-        backgroundColor: Colors.grey[900],
-        elevation: 0,
+        title: const Text('Panel Admin'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.go('/profile'),
+        ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () {
-              _showLogoutDialog();
-            },
+            icon: const Icon(Icons.logout, color: Colors.red),
+            onPressed: _showLogoutDialog,
           ),
         ],
       ),
-      body: Row(
-        children: [
-          // Sidebar
-          Container(
-            width: 250,
-            color: Colors.grey[900],
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(vertical: 20),
-              child: Column(
-                children: [
-                  _buildSidebarItem(0, Icons.dashboard, 'Dashboard'),
-                  _buildSidebarItem(1, Icons.shopping_bag, 'Pedidos'),
-                  _buildSidebarItem(2, Icons.inventory, 'Productos'),
-                  _buildSidebarItem(3, Icons.people, 'Usuarios'),
-                  _buildSidebarItem(4, Icons.email, 'Emails'),
-                  _buildSidebarItem(5, Icons.bar_chart, 'Reportes'),
-                  const Divider(color: Colors.grey),
-                  _buildSidebarItem(6, Icons.settings, 'Configuración'),
-                ],
-              ),
-            ),
-          ),
-          // Main Content
-          Expanded(
-            child: _buildMainContent(),
-          ),
-        ],
-      ),
+      body: _buildMainContent(),
+      bottomNavigationBar: _buildBottomNav(),
     );
   }
 
-  Widget _buildSidebarItem(int index, IconData icon, String label) {
-    bool isSelected = _selectedIndex == index;
+  Widget _buildBottomNav() {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: isSelected ? Colors.amber[700] : Colors.transparent,
-        borderRadius: BorderRadius.circular(8),
+        color: Colors.grey[900],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.3),
+            blurRadius: 10,
+            offset: const Offset(0, -2),
+          ),
+        ],
       ),
-      child: ListTile(
-        leading: Icon(icon, color: isSelected ? Colors.black : Colors.white),
-        title: Text(
-          label,
-          style: TextStyle(
-            color: isSelected ? Colors.black : Colors.white,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: List.generate(_sections.length, (index) {
+              final section = _sections[index];
+              final isSelected = _selectedIndex == index;
+              return GestureDetector(
+                onTap: () => setState(() => _selectedIndex = index),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: isSelected ? Colors.amber[700] : Colors.transparent,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        section.icon,
+                        size: 22,
+                        color: isSelected ? Colors.black : Colors.white70,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        section.label,
+                        style: TextStyle(
+                          fontSize: 9,
+                          color: isSelected ? Colors.black : Colors.white70,
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }),
           ),
         ),
-        onTap: () {
-          setState(() => _selectedIndex = index);
-        },
       ),
     );
   }
@@ -86,21 +102,21 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
   Widget _buildMainContent() {
     switch (_selectedIndex) {
       case 0:
-        return const AdminDashboard();
+        return const AdminDashboardMobile();
       case 1:
-        return const AdminOrdersScreen();
+        return const AdminOrdersMobile();
       case 2:
-        return const AdminProductsScreen();
+        return const AdminProductsMobile();
       case 3:
-        return const AdminUsersScreen();
+        return const AdminUsersMobile();
       case 4:
-        return const AdminEmailsScreen();
+        return const AdminEmailsMobile();
       case 5:
-        return const AdminReportsScreen();
+        return const AdminReportsMobile();
       case 6:
-        return const AdminSettingsScreen();
+        return const AdminSettingsMobile();
       default:
-        return const AdminDashboard();
+        return const AdminDashboardMobile();
     }
   }
 
@@ -108,8 +124,9 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
+        backgroundColor: Colors.grey[900],
         title: const Text('Cerrar Sesión'),
-        content: const Text('¿Estás seguro de que deseas cerrar sesión?'),
+        content: const Text('¿Salir del panel de administrador?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -120,7 +137,7 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
               Navigator.pop(context);
               context.go('/');
             },
-            child: const Text('Cerrar Sesión', style: TextStyle(color: Colors.red)),
+            child: const Text('Salir', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -128,878 +145,760 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
   }
 }
 
-// ========== DASHBOARD ==========
-class AdminDashboard extends StatelessWidget {
-  const AdminDashboard({super.key});
+class _AdminSection {
+  final IconData icon;
+  final String label;
+  _AdminSection({required this.icon, required this.label});
+}
+
+// ========== DASHBOARD MOBILE ==========
+class AdminDashboardMobile extends StatelessWidget {
+  const AdminDashboardMobile({super.key});
 
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
+          const Text(
             'Dashboard',
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 16),
+          
+          // Stats Grid 2x2
           GridView.count(
-            crossAxisCount: 4,
-            crossAxisSpacing: 16,
-            mainAxisSpacing: 16,
+            crossAxisCount: 2,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
+            childAspectRatio: 1.3,
             children: [
-              _buildStatCard('Pedidos Hoy', '24', Colors.blue),
-              _buildStatCard('Ingresos Hoy', '\$2,450', Colors.green),
-              _buildStatCard('Usuarios Nuevos', '12', Colors.purple),
-              _buildStatCard('Productos', '156', Colors.orange),
+              _StatCard(title: 'Pedidos Hoy', value: '24', icon: Icons.shopping_bag, color: Colors.blue),
+              _StatCard(title: 'Ingresos', value: '€2,450', icon: Icons.euro, color: Colors.green),
+              _StatCard(title: 'Usuarios', value: '12', icon: Icons.people, color: Colors.purple),
+              _StatCard(title: 'Productos', value: '156', icon: Icons.inventory, color: Colors.orange),
             ],
           ),
-          const SizedBox(height: 32),
           
-          // Quick Email Access Section
-          Text(
-            'Acceso Rápido a Correos',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: Colors.amber,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: _buildEmailQuickAccessCard(
-                  context,
-                  icon: Icons.shopping_cart,
-                  title: 'Correos de Compras',
-                  description: 'Confirmación de pedidos',
-                  color: Colors.green,
-                  onTap: () {
-                    // Navegar a la sección de emails de compras
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Abriendo correos de compras...')),
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _buildEmailQuickAccessCard(
-                  context,
-                  icon: Icons.cancel,
-                  title: 'Correos de Cancelación',
-                  description: 'Cancelaciones y reembolsos',
-                  color: Colors.red,
-                  onTap: () {
-                    // Navegar a la sección de emails de cancelación
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Abriendo correos de cancelación...')),
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _buildEmailQuickAccessCard(
-                  context,
-                  icon: Icons.update,
-                  title: 'Actualizaciones de Pedido',
-                  description: 'Estado del pedido',
-                  color: Colors.orange,
-                  onTap: () {
-                    // Navegar a la sección de actualizaciones
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Abriendo actualizaciones de pedido...')),
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 32),
+          const SizedBox(height: 24),
           
-          Text(
+          // Quick Email Access
+          const Text(
+            'Acceso Rápido',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.amber),
+          ),
+          const SizedBox(height: 12),
+          
+          _QuickActionCard(
+            icon: Icons.shopping_cart,
+            title: 'Correos de Compras',
+            subtitle: 'Enviar confirmaciones',
+            color: Colors.green,
+            onTap: () {},
+          ),
+          const SizedBox(height: 8),
+          _QuickActionCard(
+            icon: Icons.cancel,
+            title: 'Correos de Cancelación',
+            subtitle: 'Gestionar reembolsos',
+            color: Colors.red,
+            onTap: () {},
+          ),
+          const SizedBox(height: 8),
+          _QuickActionCard(
+            icon: Icons.local_shipping,
+            title: 'Actualizaciones de Envío',
+            subtitle: 'Notificar estados',
+            color: Colors.blue,
+            onTap: () {},
+          ),
+          
+          const SizedBox(height: 24),
+          
+          // Recent Activity
+          const Text(
             'Actividad Reciente',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 12),
+          
+          ...List.generate(5, (index) => _ActivityItem(
+            title: 'Pedido #${1000 + index}',
+            subtitle: 'Hace ${(index + 1) * 10} minutos',
+            icon: Icons.receipt,
+          )),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatCard extends StatelessWidget {
+  final String title;
+  final String value;
+  final IconData icon;
+  final Color color;
+
+  const _StatCard({
+    required this.title,
+    required this.value,
+    required this.icon,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.5)),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: color, size: 28),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 20,
               fontWeight: FontWeight.bold,
+              color: color,
             ),
           ),
-          const SizedBox(height: 16),
-          Container(
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: 5,
-              separatorBuilder: (_, __) => const Divider(),
-              itemBuilder: (context, index) => ListTile(
-                title: Text('Nuevo pedido #${1000 + index}'),
-                subtitle: Text('Hace ${(index + 1) * 10} minutos'),
-                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-              ),
-            ),
+          Text(
+            title,
+            style: const TextStyle(fontSize: 11, color: Colors.grey),
+            textAlign: TextAlign.center,
           ),
         ],
       ),
     );
   }
+}
 
-  Widget _buildEmailQuickAccessCard(
-    BuildContext context, {
-    required IconData icon,
-    required String title,
-    required String description,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
+class _QuickActionCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _QuickActionCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: color.withOpacity(0.1),
-          border: Border.all(color: color, width: 2),
           borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withOpacity(0.5)),
         ),
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+        child: Row(
           children: [
-            Icon(icon, size: 40, color: color),
-            const SizedBox(height: 12),
-            Text(
-              title,
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
-                color: color,
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(10),
               ),
-              textAlign: TextAlign.center,
+              child: Icon(icon, color: color, size: 24),
             ),
-            const SizedBox(height: 8),
-            Text(
-              description,
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey[400],
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: color,
+                    ),
+                  ),
+                  Text(
+                    subtitle,
+                    style: TextStyle(fontSize: 12, color: Colors.grey[400]),
+                  ),
+                ],
               ),
-              textAlign: TextAlign.center,
             ),
+            Icon(Icons.chevron_right, color: color),
           ],
         ),
       ),
     );
   }
-
-  Widget _buildStatCard(String title, String value, Color color) {
-    return Container(
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        border: Border.all(color: color),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            title,
-            style: const TextStyle(fontSize: 12, color: Colors.grey),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
-// ========== ORDERS MANAGEMENT ==========
-class AdminOrdersScreen extends StatelessWidget {
-  const AdminOrdersScreen({super.key});
+class _ActivityItem extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final IconData icon;
+
+  const _ActivityItem({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Gestión de Pedidos',
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              ElevatedButton.icon(
-                onPressed: () {},
-                icon: const Icon(Icons.refresh),
-                label: const Text('Actualizar'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: ListView.separated(
-                itemCount: 8,
-                separatorBuilder: (_, __) => const Divider(),
-                itemBuilder: (context, index) => _buildOrderListTile(
-                  orderId: '#${1000 + index}',
-                  customerName: 'Cliente ${index + 1}',
-                  status: ['Pendiente', 'Confirmado', 'Enviado'][index % 3],
-                  amount: '\$${(100 + index * 50).toStringAsFixed(2)}',
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildOrderListTile({
-    required String orderId,
-    required String customerName,
-    required String status,
-    required String amount,
-  }) {
-    Color statusColor = status == 'Enviado'
-        ? Colors.green
-        : status == 'Confirmado'
-            ? Colors.blue
-            : Colors.orange;
-
-    return ListTile(
-      title: Text('Pedido $orderId'),
-      subtitle: Text(customerName),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: statusColor.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              status,
-              style: TextStyle(color: statusColor, fontSize: 12),
-            ),
-          ),
-          const SizedBox(width: 16),
-          Text(amount, style: const TextStyle(fontWeight: FontWeight.bold)),
-        ],
-      ),
-    );
-  }
-}
-
-// ========== PRODUCTS MANAGEMENT ==========
-class AdminProductsScreen extends StatelessWidget {
-  const AdminProductsScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Gestión de Productos',
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              ElevatedButton.icon(
-                onPressed: () {},
-                icon: const Icon(Icons.add),
-                label: const Text('Nuevo Producto'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          Expanded(
-            child: GridView.count(
-              crossAxisCount: 4,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-              children: List.generate(
-                12,
-                (index) => _buildProductCard(index),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildProductCard(int index) {
     return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey),
+        color: Colors.grey[900],
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Column(
+      child: Row(
         children: [
+          Icon(icon, color: Colors.grey, size: 20),
+          const SizedBox(width: 12),
           Expanded(
-            child: Container(
-              color: Colors.grey[300],
-              child: const Icon(Icons.image, size: 40),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Zapatilla ${index + 1}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 4),
-                const Text('\$199.99', style: TextStyle(color: Colors.amber)),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.edit, size: 18),
-                      onPressed: () {},
-                      constraints: const BoxConstraints(),
-                      padding: EdgeInsets.zero,
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.delete, size: 18, color: Colors.red),
-                      onPressed: () {},
-                      constraints: const BoxConstraints(),
-                      padding: EdgeInsets.zero,
-                    ),
-                  ],
-                ),
+                Text(title, style: const TextStyle(fontWeight: FontWeight.w500)),
+                Text(subtitle, style: TextStyle(fontSize: 12, color: Colors.grey[500])),
               ],
             ),
           ),
+          const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
         ],
       ),
     );
   }
 }
 
-// ========== USERS MANAGEMENT ==========
-class AdminUsersScreen extends StatelessWidget {
-  const AdminUsersScreen({super.key});
+// ========== ORDERS MOBILE ==========
+class AdminOrdersMobile extends StatelessWidget {
+  const AdminOrdersMobile({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(24),
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: 10,
+      itemBuilder: (context, index) {
+        return Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.grey[900],
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Pedido #${1000 + index}',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: index % 3 == 0 ? Colors.green.withOpacity(0.2) : Colors.orange.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      index % 3 == 0 ? 'Completado' : 'Pendiente',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: index % 3 == 0 ? Colors.green : Colors.orange,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text('Cliente: Usuario ${index + 1}', style: TextStyle(color: Colors.grey[400], fontSize: 13)),
+              Text('Total: €${(index + 1) * 99}.00', style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold)),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+// ========== PRODUCTS MOBILE ==========
+class AdminProductsMobile extends StatelessWidget {
+  const AdminProductsMobile({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              const Expanded(
+                child: Text('Productos', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              ),
+              ElevatedButton.icon(
+                onPressed: () {},
+                icon: const Icon(Icons.add, size: 18),
+                label: const Text('Nuevo'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.amber[700],
+                  foregroundColor: Colors.black,
+                ),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: GridView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              childAspectRatio: 0.8,
+            ),
+            itemCount: 12,
+            itemBuilder: (context, index) {
+              return Container(
+                decoration: BoxDecoration(
+                  color: Colors.grey[900],
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      flex: 3,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.grey[800],
+                          borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                        ),
+                        child: const Center(child: Icon(Icons.image, size: 40, color: Colors.grey)),
+                      ),
+                    ),
+                    Expanded(
+                      flex: 2,
+                      child: Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              'Zapatilla ${index + 1}',
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const Text('€199.99', style: TextStyle(color: Colors.amber, fontSize: 12)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ========== USERS MOBILE ==========
+class AdminUsersMobile extends StatelessWidget {
+  const AdminUsersMobile({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: 10,
+      itemBuilder: (context, index) {
+        return Container(
+          margin: const EdgeInsets.only(bottom: 8),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.grey[900],
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            children: [
+              CircleAvatar(
+                backgroundColor: Colors.amber[700],
+                child: Text('${index + 1}', style: const TextStyle(color: Colors.black)),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Usuario ${index + 1}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                    Text('usuario${index + 1}@email.com', style: TextStyle(fontSize: 12, color: Colors.grey[400])),
+                  ],
+                ),
+              ),
+              PopupMenuButton(
+                icon: const Icon(Icons.more_vert, color: Colors.grey),
+                itemBuilder: (context) => [
+                  const PopupMenuItem(child: Text('Ver Perfil')),
+                  const PopupMenuItem(child: Text('Editar')),
+                  const PopupMenuItem(child: Text('Suspender')),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+// ========== EMAILS MOBILE ==========
+class AdminEmailsMobile extends StatelessWidget {
+  const AdminEmailsMobile({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Gestión de Usuarios',
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+          const Text('Enviar Emails', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 16),
+          
+          _EmailTypeCard(
+            icon: Icons.shopping_cart,
+            title: 'Confirmación de Compra',
+            color: Colors.green,
+            onTap: () {},
           ),
+          _EmailTypeCard(
+            icon: Icons.cancel,
+            title: 'Cancelación de Pedido',
+            color: Colors.red,
+            onTap: () {},
+          ),
+          _EmailTypeCard(
+            icon: Icons.local_shipping,
+            title: 'Actualización de Envío',
+            color: Colors.blue,
+            onTap: () {},
+          ),
+          _EmailTypeCard(
+            icon: Icons.campaign,
+            title: 'Newsletter',
+            color: Colors.purple,
+            onTap: () {},
+          ),
+          _EmailTypeCard(
+            icon: Icons.local_offer,
+            title: 'Promoción',
+            color: Colors.orange,
+            onTap: () {},
+          ),
+          _EmailTypeCard(
+            icon: Icons.shopping_basket,
+            title: 'Carrito Abandonado',
+            color: Colors.amber,
+            onTap: () {},
+          ),
+          
           const SizedBox(height: 24),
-          Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: ListView.separated(
-                itemCount: 10,
-                separatorBuilder: (_, __) => const Divider(),
-                itemBuilder: (context, index) => ListTile(
-                  leading: CircleAvatar(
-                    child: Text('${index + 1}'),
-                  ),
-                  title: Text('Usuario ${index + 1}'),
-                  subtitle: Text('usuario${index + 1}@example.com'),
-                  trailing: PopupMenuButton(
-                    itemBuilder: (context) => [
-                      const PopupMenuItem(child: Text('Ver Perfil')),
-                      const PopupMenuItem(child: Text('Editar')),
-                      const PopupMenuItem(child: Text('Suspender')),
+          const Text('Historial Reciente', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 12),
+          
+          ...List.generate(5, (index) => Container(
+            margin: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.grey[900],
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.email, color: Colors.grey[600], size: 20),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Email enviado a usuario${index + 1}@email.com', 
+                        style: const TextStyle(fontSize: 13),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Text('Hace ${(index + 1) * 2} horas', style: TextStyle(fontSize: 11, color: Colors.grey[500])),
                     ],
                   ),
                 ),
-              ),
+              ],
             ),
-          ),
+          )),
         ],
       ),
     );
   }
 }
 
-// ========== EMAILS MANAGEMENT ==========
-class AdminEmailsScreen extends ConsumerStatefulWidget {
-  const AdminEmailsScreen({super.key});
+class _EmailTypeCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final Color color;
+  final VoidCallback onTap;
 
-  @override
-  ConsumerState<AdminEmailsScreen> createState() => _AdminEmailsScreenState();
-}
-
-class _AdminEmailsScreenState extends ConsumerState<AdminEmailsScreen> {
-  final _subjectController = TextEditingController();
-  final _contentController = TextEditingController();
-  String _selectedTemplate = 'newsletter';
-  List<String> _selectedRecipients = [];
+  const _EmailTypeCard({
+    required this.icon,
+    required this.title,
+    required this.color,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Row(
-        children: [
-          Expanded(
-            flex: 1,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Campañas de Email',
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Expanded(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: SingleChildScrollView(
-                      child: Column(
-                        children: [
-                          _buildEmailTemplateButton('newsletter', '📬 Newsletter'),
-                          _buildEmailTemplateButton('promotion', '🎉 Promoción'),
-                          _buildEmailTemplateButton('event', '🎊 Evento'),
-                          _buildEmailTemplateButton('announcement', '📢 Anuncio'),
-                          _buildEmailTemplateButton('abandoned_cart', '🛒 Carrito Abandonado'),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 24),
-          Expanded(
-            flex: 2,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Crear Campaña',
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                TextField(
-                  controller: _subjectController,
-                  decoration: InputDecoration(
-                    labelText: 'Asunto del Email',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Expanded(
-                  child: TextField(
-                    controller: _contentController,
-                    decoration: InputDecoration(
-                      labelText: 'Contenido del Email (HTML)',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    maxLines: null,
-                    expands: true,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    ElevatedButton(
-                      onPressed: () {
-                        _showRecipientSelector();
-                      },
-                      child: const Text('Seleccionar Destinatarios'),
-                    ),
-                    const SizedBox(width: 12),
-                    ElevatedButton(
-                      onPressed: () {
-                        _showPreview();
-                      },
-                      child: const Text('Previsualizar'),
-                    ),
-                    const SizedBox(width: 12),
-                    ElevatedButton(
-                      onPressed: () {
-                        _sendCampaign();
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                      ),
-                      child: const Text('Enviar'),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEmailTemplateButton(String id, String label) {
-    bool isSelected = _selectedTemplate == id;
-    return Container(
-      decoration: BoxDecoration(
-        color: isSelected ? Colors.amber[700] : Colors.transparent,
-      ),
-      child: ListTile(
-        title: Text(
-          label,
-          style: TextStyle(
-            color: isSelected ? Colors.black : Colors.white,
-          ),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withOpacity(0.3)),
         ),
-        onTap: () {
-          setState(() => _selectedTemplate = id);
-        },
-      ),
-    );
-  }
-
-  void _showRecipientSelector() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Seleccionar Destinatarios'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
+        child: Row(
           children: [
-            CheckboxListTile(
-              title: const Text('Todos los usuarios'),
-              value: _selectedRecipients.contains('all'),
-              onChanged: (value) {
-                setState(() {
-                  if (value == true) {
-                    _selectedRecipients.add('all');
-                  } else {
-                    _selectedRecipients.remove('all');
-                  }
-                });
-              },
+            Icon(icon, color: color),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Text(title, style: TextStyle(color: color, fontWeight: FontWeight.w500)),
             ),
-            CheckboxListTile(
-              title: const Text('Usuarios activos'),
-              value: _selectedRecipients.contains('active'),
-              onChanged: (value) {
-                setState(() {
-                  if (value == true) {
-                    _selectedRecipients.add('active');
-                  } else {
-                    _selectedRecipients.remove('active');
-                  }
-                });
-              },
-            ),
-            CheckboxListTile(
-              title: const Text('Suscriptores newsletter'),
-              value: _selectedRecipients.contains('newsletter'),
-              onChanged: (value) {
-                setState(() {
-                  if (value == true) {
-                    _selectedRecipients.add('newsletter');
-                  } else {
-                    _selectedRecipients.remove('newsletter');
-                  }
-                });
-              },
-            ),
+            Icon(Icons.send, color: color, size: 20),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cerrar'),
-          ),
-        ],
       ),
     );
-  }
-
-  void _showPreview() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Previsualización'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('Asunto: ${_subjectController.text}'),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: SingleChildScrollView(
-                child: Text(_contentController.text.isEmpty
-                    ? 'Sin contenido'
-                    : _contentController.text),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cerrar'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _sendCampaign() {
-    if (_subjectController.text.isEmpty || _contentController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Por favor completa todos los campos')),
-      );
-      return;
-    }
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('✅ Campaña de email enviada correctamente')),
-    );
-
-    _subjectController.clear();
-    _contentController.clear();
-    _selectedRecipients.clear();
-  }
-
-  @override
-  void dispose() {
-    _subjectController.dispose();
-    _contentController.dispose();
-    super.dispose();
   }
 }
 
-// ========== REPORTS ==========
-class AdminReportsScreen extends StatelessWidget {
-  const AdminReportsScreen({super.key});
+// ========== REPORTS MOBILE ==========
+class AdminReportsMobile extends StatelessWidget {
+  const AdminReportsMobile({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(24),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Reportes',
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 24),
-          Expanded(
-            child: GridView.count(
-              crossAxisCount: 2,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-              children: [
-                _buildReportCard(
-                  'Ventas Mensuales',
-                  '\$45,230',
-                  Icons.trending_up,
-                  Colors.green,
-                ),
-                _buildReportCard(
-                  'Clientes Nuevos',
-                  '342',
-                  Icons.people,
-                  Colors.blue,
-                ),
-                _buildReportCard(
-                  'Productos Vendidos',
-                  '1,240',
-                  Icons.shopping_bag,
-                  Colors.purple,
-                ),
-                _buildReportCard(
-                  'Tasa de Conversión',
-                  '3.8%',
-                  Icons.percent,
-                  Colors.orange,
-                ),
-              ],
-            ),
+          const Text('Reportes', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 16),
+          
+          GridView.count(
+            crossAxisCount: 2,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            children: [
+              _ReportCard(title: 'Ventas Mensuales', value: '€45,230', icon: Icons.trending_up, color: Colors.green),
+              _ReportCard(title: 'Clientes Nuevos', value: '342', icon: Icons.people, color: Colors.blue),
+              _ReportCard(title: 'Productos Vendidos', value: '1,240', icon: Icons.shopping_bag, color: Colors.purple),
+              _ReportCard(title: 'Tasa Conversión', value: '3.8%', icon: Icons.percent, color: Colors.orange),
+            ],
           ),
         ],
       ),
     );
   }
+}
 
-  Widget _buildReportCard(
-    String title,
-    String value,
-    IconData icon,
-    Color color,
-  ) {
+class _ReportCard extends StatelessWidget {
+  final String title;
+  final String value;
+  final IconData icon;
+  final Color color;
+
+  const _ReportCard({
+    required this.title,
+    required this.value,
+    required this.icon,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey),
-        borderRadius: BorderRadius.circular(8),
+        color: Colors.grey[900],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.3)),
       ),
-      padding: const EdgeInsets.all(24),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, size: 48, color: color),
-          const SizedBox(height: 16),
-          Text(
-            title,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 32,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
+          Icon(icon, color: color, size: 32),
+          const SizedBox(height: 12),
+          Text(value, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: color)),
+          const SizedBox(height: 4),
+          Text(title, style: TextStyle(fontSize: 12, color: Colors.grey[400]), textAlign: TextAlign.center),
         ],
       ),
     );
   }
 }
 
-// ========== SETTINGS ==========
-class AdminSettingsScreen extends StatefulWidget {
-  const AdminSettingsScreen({super.key});
+// ========== SETTINGS MOBILE ==========
+class AdminSettingsMobile extends StatefulWidget {
+  const AdminSettingsMobile({super.key});
 
   @override
-  State<AdminSettingsScreen> createState() => _AdminSettingsScreenState();
+  State<AdminSettingsMobile> createState() => _AdminSettingsMobileState();
 }
 
-class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
+class _AdminSettingsMobileState extends State<AdminSettingsMobile> {
   bool _emailNotifications = true;
   bool _maintenanceMode = false;
   bool _stockAlerts = true;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: ListView(
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        const Text('Configuración', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 24),
+        
+        _SettingSwitch(
+          title: 'Notificaciones por Email',
+          subtitle: 'Recibir alertas de pedidos',
+          value: _emailNotifications,
+          onChanged: (v) => setState(() => _emailNotifications = v),
+        ),
+        _SettingSwitch(
+          title: 'Modo Mantenimiento',
+          subtitle: 'Desactivar la tienda',
+          value: _maintenanceMode,
+          onChanged: (v) => setState(() => _maintenanceMode = v),
+        ),
+        _SettingSwitch(
+          title: 'Alertas de Stock',
+          subtitle: 'Avisar cuando hay poco stock',
+          value: _stockAlerts,
+          onChanged: (v) => setState(() => _stockAlerts = v),
+        ),
+        
+        const SizedBox(height: 24),
+        const Text('General', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.grey)),
+        const SizedBox(height: 12),
+        
+        _SettingItem(title: 'Datos de la Tienda', icon: Icons.store, onTap: () {}),
+        _SettingItem(title: 'Métodos de Pago', icon: Icons.payment, onTap: () {}),
+        _SettingItem(title: 'Opciones de Envío', icon: Icons.local_shipping, onTap: () {}),
+        _SettingItem(title: 'Impuestos', icon: Icons.receipt, onTap: () {}),
+      ],
+    );
+  }
+}
+
+class _SettingSwitch extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  const _SettingSwitch({
+    required this.title,
+    required this.subtitle,
+    required this.value,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.grey[900],
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
         children: [
-          Text(
-            'Configuración',
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.bold,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: const TextStyle(fontWeight: FontWeight.w500)),
+                Text(subtitle, style: TextStyle(fontSize: 12, color: Colors.grey[400])),
+              ],
             ),
           ),
-          const SizedBox(height: 32),
-          Text(
-            'Notificaciones',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 16),
-          SwitchListTile(
-            title: const Text('Notificaciones de Email'),
-            subtitle: const Text('Recibir emails de nuevos pedidos'),
-            value: _emailNotifications,
-            onChanged: (value) {
-              setState(() => _emailNotifications = value);
-            },
-          ),
-          SwitchListTile(
-            title: const Text('Alertas de Stock'),
-            subtitle: const Text('Notificar cuando el stock sea bajo'),
-            value: _stockAlerts,
-            onChanged: (value) {
-              setState(() => _stockAlerts = value);
-            },
-          ),
-          const Divider(),
-          const SizedBox(height: 16),
-          Text(
-            'Sistema',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 16),
-          SwitchListTile(
-            title: const Text('Modo de Mantenimiento'),
-            subtitle: const Text('Desactiva la tienda para usuarios'),
-            value: _maintenanceMode,
-            onChanged: (value) {
-              setState(() => _maintenanceMode = value);
-            },
-          ),
-          const Divider(),
-          const SizedBox(height: 24),
-          ElevatedButton(
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('✅ Cambios guardados')),
-              );
-            },
-            child: const Text('Guardar Cambios'),
+          Switch(
+            value: value,
+            onChanged: onChanged,
+            activeColor: Colors.amber[700],
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _SettingItem extends StatelessWidget {
+  final String title;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  const _SettingItem({
+    required this.title,
+    required this.icon,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.grey[900],
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: Colors.grey),
+            const SizedBox(width: 16),
+            Expanded(child: Text(title)),
+            const Icon(Icons.chevron_right, color: Colors.grey),
+          ],
+        ),
       ),
     );
   }
