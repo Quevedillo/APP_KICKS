@@ -34,18 +34,20 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
           Container(
             width: 250,
             color: Colors.grey[900],
-            child: ListView(
+            child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(vertical: 20),
-              children: [
-                _buildSidebarItem(0, Icons.dashboard, 'Dashboard'),
-                _buildSidebarItem(1, Icons.shopping_bag, 'Pedidos'),
-                _buildSidebarItem(2, Icons.inventory, 'Productos'),
-                _buildSidebarItem(3, Icons.people, 'Usuarios'),
-                _buildSidebarItem(4, Icons.email, 'Emails'),
-                _buildSidebarItem(5, Icons.bar_chart, 'Reportes'),
-                const Divider(color: Colors.grey),
-                _buildSidebarItem(6, Icons.settings, 'Configuración'),
-              ],
+              child: Column(
+                children: [
+                  _buildSidebarItem(0, Icons.dashboard, 'Dashboard'),
+                  _buildSidebarItem(1, Icons.shopping_bag, 'Pedidos'),
+                  _buildSidebarItem(2, Icons.inventory, 'Productos'),
+                  _buildSidebarItem(3, Icons.people, 'Usuarios'),
+                  _buildSidebarItem(4, Icons.email, 'Emails'),
+                  _buildSidebarItem(5, Icons.bar_chart, 'Reportes'),
+                  const Divider(color: Colors.grey),
+                  _buildSidebarItem(6, Icons.settings, 'Configuración'),
+                ],
+              ),
             ),
           ),
           // Main Content
@@ -595,19 +597,23 @@ class _AdminEmailsScreenState extends ConsumerState<AdminEmailsScreen> {
                   ),
                 ),
                 const SizedBox(height: 24),
-                Container(
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: ListView(
-                    children: [
-                      _buildEmailTemplateButton('newsletter', '📬 Newsletter'),
-                      _buildEmailTemplateButton('promotion', '🎉 Promoción'),
-                      _buildEmailTemplateButton('event', '🎊 Evento'),
-                      _buildEmailTemplateButton('announcement', '📢 Anuncio'),
-                      _buildEmailTemplateButton('abandoned_cart', '🛒 Carrito Abandonado'),
-                    ],
+                Expanded(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: SingleChildScrollView(
+                      child: Column(
+                        children: [
+                          _buildEmailTemplateButton('newsletter', '📬 Newsletter'),
+                          _buildEmailTemplateButton('promotion', '🎉 Promoción'),
+                          _buildEmailTemplateButton('event', '🎊 Evento'),
+                          _buildEmailTemplateButton('announcement', '📢 Anuncio'),
+                          _buildEmailTemplateButton('abandoned_cart', '🛒 Carrito Abandonado'),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ],
