@@ -130,6 +130,10 @@ class OrdersScreen extends ConsumerWidget {
   }
 
   Widget _buildOrdersList(BuildContext context, WidgetRef ref, List<Order> orders) {
+    if (orders.isEmpty) {
+      return _buildNoOrders(context);
+    }
+
     return RefreshIndicator(
       onRefresh: () async {
         ref.refresh(userOrdersProvider);
