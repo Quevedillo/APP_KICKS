@@ -56,6 +56,8 @@ class Order {
   final String? returnStatus;
   final List<OrderItem> items;
   final String? shippingName;
+  final String? shippingEmail;
+  final String? shippingPhone;
   final Map<String, dynamic>? shippingAddress;
   final String? billingEmail;
   final DateTime createdAt;
@@ -72,6 +74,8 @@ class Order {
     this.returnStatus,
     required this.items,
     this.shippingName,
+    this.shippingEmail,
+    this.shippingPhone,
     this.shippingAddress,
     this.billingEmail,
     required this.createdAt,
@@ -121,6 +125,8 @@ class Order {
       returnStatus: json['return_status'] as String?,
       items: items,
       shippingName: json['shipping_name'] as String?,
+      shippingEmail: json['shipping_email'] as String?,
+      shippingPhone: json['shipping_phone'] as String?,
       shippingAddress: json['shipping_address'] as Map<String, dynamic>?,
       billingEmail: json['billing_email'] as String?,
       createdAt: json['created_at'] != null 

@@ -4,10 +4,13 @@ import '../data/repositories/product_repository.dart';
 import '../data/repositories/auth_repository.dart';
 import '../data/repositories/order_repository.dart';
 import '../data/repositories/email_repository.dart';
+import '../data/repositories/admin_repository.dart';
 import '../data/models/product.dart';
 import '../data/models/category.dart';
 import '../data/models/order.dart';
 import '../data/models/cart_item.dart';
+import '../data/models/user_profile.dart';
+import '../data/models/discount_code.dart';
 
 // ========== Clients ==========
 final supabaseClientProvider = Provider<SupabaseClient>((ref) {
@@ -29,6 +32,10 @@ final orderRepositoryProvider = Provider<OrderRepository>((ref) {
 
 final emailRepositoryProvider = Provider<EmailRepository>((ref) {
   return EmailRepository();
+});
+
+final adminRepositoryProvider = Provider<AdminRepository>((ref) {
+  return AdminRepository(ref.watch(supabaseClientProvider));
 });
 
 // ========== Auth Providers ==========
@@ -221,3 +228,48 @@ final searchResultsProvider = FutureProvider<List<Product>>((ref) async {
   if (query.isEmpty) return [];
   return ref.watch(productRepositoryProvider).searchProducts(query);
 });
+
+// ========== Admin Providers ==========
+final adminDashboardStatsProvider = FutureProvider<Map<String, dynamic>>((ref) async {
+  final isAdmin = await ref.watch(isAdminProvider.future);
+  if (!isAdmin) throw Exception('Not authorized');
+  return ref.watch(adminRepositoryProvider).getDashboardStats();
+});
+
+final adminAllOrdersProvider = FutureProvider<List<Order>>((ref) async {
+  final isAdmin = await ref.watch(isAdminProvider.future);
+  if (!isAdmin) throw Exception('Not authorized');
+  return ref.watch(adminRepositoryProvider).getAllOrders();
+});
+
+final adminAllProductsProvider = FutureProvider<List<Product>>((ref) async {
+  final isAdmin = await ref.watch(isAdminProvider.future);
+  if (!isAdmin) throw Exception('Not authorized');
+  return ref.watch(adminRepositoryProvider).getAllProducts();
+});
+
+final adminAllUsersProvider = FutureProvider<List<UserProfile>>((ref) async {
+  final isAdmin = await ref.watch(isAdminProvider.future);
+  if (!isAdmin) throw Exception('Not authorized');
+  return ref.watch(adminRepositoryProvider).getAllUsers();
+});
+
+final adminAllCategoriesProvider = FutureProvider<List<Category>>((ref) async {
+  final isAdmin = await ref.watch(isAdminProvider.future);
+  if (!isAdmin) throw Exception('Not authorized');
+  return ref.watch(adminRepositoryProvider).getAllCategories();
+});
+
+final adminAllDiscountCodesProvider = FutureProvider<List<DiscountCode>>((ref) async {
+  final isAdmin = await ref.watch(isAdminProvider.future);
+  if (!isAdmin) throw Exception('Not authorized');
+  return ref.watch(adminRepositoryProvider).getAllDiscountCodes();
+});
+
+class AdminSelectedSection extends Notifier<int> {
+  @override
+  int build() => 0;
+  void setSection(int index) => state = index;
+}
+
+final adminSelectedSectionProvider = NotifierProvider<AdminSelectedSection, int>(AdminSelectedSection.new);

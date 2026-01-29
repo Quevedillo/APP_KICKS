@@ -270,4 +270,6 @@ CHECKLIST:
 ☐ Documentar configuración
 ☐ Deployar a producción
 ☐ Monitorear métricas de entrega
+*/
+*/
 
