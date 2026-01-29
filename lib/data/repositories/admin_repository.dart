@@ -26,7 +26,7 @@ class AdminRepository {
           .from('orders')
           .select('id, status, total_price, stripe_session_id')
           .gte('created_at', today)
-          .in_('status', ['paid', 'completed', 'processing', 'shipped']);
+          .in('status', ['paid', 'completed', 'processing', 'shipped']);
 
       double revenueToday = 0;
       int paidOrdersToday = 0;
@@ -72,7 +72,7 @@ class AdminRepository {
       final totalRevenueData = await _client
           .from('orders')
           .select('total_price')
-          .in_('status', ['paid', 'completed']);
+          .in('status', ['paid', 'completed']);
 
       double totalRevenue = 0;
       for (var order in totalRevenueData as List) {
@@ -501,7 +501,7 @@ class AdminRepository {
           .select('total_price, status, created_at')
           .gte('created_at', start)
           .lte('created_at', end)
-          .in_('status', ['paid', 'completed']);
+          .in('status', ['paid', 'completed']);
 
       double totalRevenue = 0;
       int totalOrders = 0;

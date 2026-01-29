@@ -13,7 +13,7 @@ class StripeAdminService {
       final orders = await _client
           .from('orders')
           .select()
-          .in_('status', ['paid', 'completed'])
+          .in('status', ['paid', 'completed'])
           .order('created_at', ascending: false);
 
       return (orders as List).map((e) => e as Map<String, dynamic>).toList();
@@ -29,7 +29,7 @@ class StripeAdminService {
       final orders = await _client
           .from('orders')
           .select()
-          .in_('status', ['failed', 'pending'])
+          .in('status', ['failed', 'pending'])
           .order('created_at', ascending: false);
 
       return (orders as List).map((e) => e as Map<String, dynamic>).toList();
