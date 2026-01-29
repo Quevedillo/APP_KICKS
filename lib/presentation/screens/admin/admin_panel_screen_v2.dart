@@ -4,9 +4,6 @@ import 'package:go_router/go_router.dart';
 import '../../../logic/providers.dart';
 import '../../../data/models/order.dart';
 import '../../../data/models/product.dart';
-import '../../../data/models/user_profile.dart';
-import '../../../data/models/discount_code.dart';
-import '../../../data/models/category.dart';
 import 'package:intl/intl.dart';
 
 // ============================================================================
@@ -991,7 +988,7 @@ class _ProductCard extends StatelessWidget {
                 style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
               ),
               Text(
-                product.brand,
+                product.brand ?? 'Sin marca',
                 style: const TextStyle(color: Colors.grey, fontSize: 12),
               ),
             ],
@@ -1057,9 +1054,9 @@ class _ProductDetailSheet extends ConsumerWidget {
                 children: [
                   _InfoRow(label: 'Precio', value: '\$${(product.price / 100).toStringAsFixed(2)}', valueColor: Colors.green, isBold: true),
                   _InfoRow(label: 'Stock', value: product.stock.toString()),
-                  _InfoRow(label: 'Brand', value: product.brand),
-                  _InfoRow(label: 'SKU', value: product.sku),
-                  _InfoRow(label: 'Categoría', value: product.categoryId),
+                  _InfoRow(label: 'Brand', value: product.brand ?? 'N/A'),
+                  _InfoRow(label: 'SKU', value: product.sku ?? 'N/A'),
+                  _InfoRow(label: 'Categoría', value: product.categoryId ?? 'N/A'),
                 ],
               ),
             ),
@@ -1189,21 +1186,20 @@ class _ProductFormDialogState extends ConsumerState<_ProductFormDialog> {
       final newProduct = Product(
         id: widget.product?.id ?? '',
         name: _nameController.text,
-        price: price,
-        stock: stock,
-        brand: _brandController.text,
-        sku: _skuController.text,
-        categoryId: widget.product?.categoryId ?? '',
         slug: widget.product?.slug ?? _nameController.text.toLowerCase().replaceAll(' ', '-'),
         description: widget.product?.description ?? '',
-        images: widget.product?.images ?? [],
-        sizesAvailable: widget.product?.sizesAvailable ?? {},
-        isFeatured: widget.product?.isFeatured ?? false,
+        price: price,
+        stock: stock,
+        categoryId: widget.product?.categoryId ?? '',
+        brand: _brandController.text,
+        sku: _skuController.text,
         isLimitedEdition: widget.product?.isLimitedEdition ?? false,
+        isFeatured: widget.product?.isFeatured ?? false,
         isActive: widget.product?.isActive ?? true,
-        costPrice: widget.product?.costPrice,
+        sizesAvailable: widget.product?.sizesAvailable ?? {},
+        images: widget.product?.images ?? [],
+        tags: widget.product?.tags ?? [],
         createdAt: widget.product?.createdAt ?? DateTime.now(),
-        updatedAt: DateTime.now(),
       );
 
       final success = await ref.read(adminRepositoryProvider).upsertProduct(newProduct);

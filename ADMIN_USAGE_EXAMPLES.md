@@ -198,19 +198,18 @@ class _CreateProductExampleState extends ConsumerState<CreateProductExample> {
             final product = Product(
               id: '',
               name: nameController.text,
+              slug: nameController.text.toLowerCase().replaceAll(' ', '-'),
               price: (double.parse(priceController.text) * 100).toInt(),
               stock: int.parse(stockController.text),
-              // ... otros campos obligatorios
               categoryId: '',
-              slug: '',
               description: '',
               images: [],
               sizesAvailable: {},
+              tags: [],
               isFeatured: false,
               isLimitedEdition: false,
               isActive: true,
               createdAt: DateTime.now(),
-              updatedAt: DateTime.now(),
             );
 
             final success = await ref.read(adminRepositoryProvider).upsertProduct(product);
