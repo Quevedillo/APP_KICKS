@@ -5,6 +5,7 @@ import '../data/repositories/auth_repository.dart';
 import '../data/repositories/order_repository.dart';
 import '../data/repositories/email_repository.dart';
 import '../data/repositories/admin_repository.dart';
+import '../data/services/stripe_admin_service.dart';
 import '../data/models/product.dart';
 import '../data/models/category.dart';
 import '../data/models/order.dart';
@@ -36,6 +37,10 @@ final emailRepositoryProvider = Provider<EmailRepository>((ref) {
 
 final adminRepositoryProvider = Provider<AdminRepository>((ref) {
   return AdminRepository(ref.watch(supabaseClientProvider));
+});
+
+final stripeAdminServiceProvider = Provider<StripeAdminService>((ref) {
+  return StripeAdminService(ref.watch(supabaseClientProvider));
 });
 
 // ========== Auth Providers ==========
@@ -230,46 +235,158 @@ final searchResultsProvider = FutureProvider<List<Product>>((ref) async {
 });
 
 // ========== Admin Providers ==========
-final adminDashboardStatsProvider = FutureProvider<Map<String, dynamic>>((ref) async {
+
+/// Dashboard con estadísticas en tiempo real sincronizadas con BD y Stripe
+final adminDashboardStatsProvider = FutureProvider.autoDispose<Map<String, dynamic>>((ref) async {
   final isAdmin = await ref.watch(isAdminProvider.future);
   if (!isAdmin) throw Exception('Not authorized');
   return ref.watch(adminRepositoryProvider).getDashboardStats();
 });
 
-final adminAllOrdersProvider = FutureProvider<List<Order>>((ref) async {
+/// Todas las órdenes sincronizadas con Stripe
+final adminAllOrdersProvider = FutureProvider.autoDispose<List<Order>>((ref) async {
   final isAdmin = await ref.watch(isAdminProvider.future);
   if (!isAdmin) throw Exception('Not authorized');
   return ref.watch(adminRepositoryProvider).getAllOrders();
 });
 
-final adminAllProductsProvider = FutureProvider<List<Product>>((ref) async {
+/// Órdenes por estado específico
+final adminOrdersByStatusProvider = FutureProvider.family.autoDispose<List<Order>, String>((ref, status) async {
+  final isAdmin = await ref.watch(isAdminProvider.future);
+  if (!isAdmin) throw Exception('Not authorized');
+  return ref.watch(adminRepositoryProvider).getOrdersByStatus(status);
+});
+
+/// Solicitudes de devolución
+final adminReturnRequestsProvider = FutureProvider.autoDispose<List<Order>>((ref) async {
+  final isAdmin = await ref.watch(isAdminProvider.future);
+  if (!isAdmin) throw Exception('Not authorized');
+  return ref.watch(adminRepositoryProvider).getReturnRequests();
+});
+
+/// Todos los productos con stock sincronizado
+final adminAllProductsProvider = FutureProvider.autoDispose<List<Product>>((ref) async {
   final isAdmin = await ref.watch(isAdminProvider.future);
   if (!isAdmin) throw Exception('Not authorized');
   return ref.watch(adminRepositoryProvider).getAllProducts();
 });
 
-final adminAllUsersProvider = FutureProvider<List<UserProfile>>((ref) async {
+/// Productos con bajo stock
+final adminLowStockProductsProvider = FutureProvider.autoDispose<List<Product>>((ref) async {
+  final isAdmin = await ref.watch(isAdminProvider.future);
+  if (!isAdmin) throw Exception('Not authorized');
+  return ref.watch(adminRepositoryProvider).getLowStockProducts();
+});
+
+/// Todos los usuarios
+final adminAllUsersProvider = FutureProvider.autoDispose<List<UserProfile>>((ref) async {
   final isAdmin = await ref.watch(isAdminProvider.future);
   if (!isAdmin) throw Exception('Not authorized');
   return ref.watch(adminRepositoryProvider).getAllUsers();
 });
 
-final adminAllCategoriesProvider = FutureProvider<List<Category>>((ref) async {
+/// Estadísticas de usuarios
+final adminUserStatsProvider = FutureProvider.autoDispose<Map<String, dynamic>>((ref) async {
+  final isAdmin = await ref.watch(isAdminProvider.future);
+  if (!isAdmin) throw Exception('Not authorized');
+  return ref.watch(adminRepositoryProvider).getUserStats();
+});
+
+/// Todas las categorías
+final adminAllCategoriesProvider = FutureProvider.autoDispose<List<Category>>((ref) async {
   final isAdmin = await ref.watch(isAdminProvider.future);
   if (!isAdmin) throw Exception('Not authorized');
   return ref.watch(adminRepositoryProvider).getAllCategories();
 });
 
-final adminAllDiscountCodesProvider = FutureProvider<List<DiscountCode>>((ref) async {
+/// Todos los códigos de descuento
+final adminAllDiscountCodesProvider = FutureProvider.autoDispose<List<DiscountCode>>((ref) async {
   final isAdmin = await ref.watch(isAdminProvider.future);
   if (!isAdmin) throw Exception('Not authorized');
   return ref.watch(adminRepositoryProvider).getAllDiscountCodes();
 });
 
-class AdminSelectedSection extends Notifier<int> {
+/// Códigos de descuento activos
+final adminActiveDiscountCodesProvider = FutureProvider.autoDispose<List<DiscountCode>>((ref) async {
+  final isAdmin = await ref.watch(isAdminProvider.future);
+  if (!isAdmin) throw Exception('Not authorized');
+  return ref.watch(adminRepositoryProvider).getActiveDiscountCodes();
+});
+
+/// Estadísticas de órdenes por estado
+final adminOrderStatsProvider = FutureProvider.autoDispose<Map<String, int>>((ref) async {
+  final isAdmin = await ref.watch(isAdminProvider.future);
+  if (!isAdmin) throw Exception('Not authorized');
+  return ref.watch(adminRepositoryProvider).getOrderStats();
+});
+
+/// Análisis de ingresos
+final adminRevenueAnalyticsProvider = FutureProvider.family.autoDispose<Map<String, dynamic>, (DateTime, DateTime)>(
+  (ref, dates) async {
+    final isAdmin = await ref.watch(isAdminProvider.future);
+    if (!isAdmin) throw Exception('Not authorized');
+    return ref.watch(adminRepositoryProvider).getRevenueAnalytics(
+      startDate: dates.$1,
+      endDate: dates.$2,
+    );
+  },
+);
+
+/// Sección actualmente seleccionada en admin
+class AdminSelectedSectionNotifier extends Notifier<int> {
   @override
   int build() => 0;
+  
   void setSection(int index) => state = index;
 }
 
-final adminSelectedSectionProvider = NotifierProvider<AdminSelectedSection, int>(AdminSelectedSection.new);
+final adminSelectedSectionProvider = NotifierProvider<AdminSelectedSectionNotifier, int>(
+  AdminSelectedSectionNotifier.new,
+);
+
+// ========== STRIPE ADMIN PROVIDERS ==========
+
+/// Órdenes pagadas sincronizadas desde Stripe
+final stripePaidOrdersProvider = FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
+  final isAdmin = await ref.watch(isAdminProvider.future);
+  if (!isAdmin) throw Exception('Not authorized');
+  return ref.watch(stripeAdminServiceProvider).getPaidOrders();
+});
+
+/// Órdenes fallidas en Stripe
+final stripeFailedOrdersProvider = FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
+  final isAdmin = await ref.watch(isAdminProvider.future);
+  if (!isAdmin) throw Exception('Not authorized');
+  return ref.watch(stripeAdminServiceProvider).getFailedOrders();
+});
+
+/// Resumen de pagos por período
+final stripePaymentSummaryProvider = FutureProvider.family.autoDispose<Map<String, dynamic>, (DateTime, DateTime)>(
+  (ref, dates) async {
+    final isAdmin = await ref.watch(isAdminProvider.future);
+    if (!isAdmin) throw Exception('Not authorized');
+    return ref.watch(stripeAdminServiceProvider).getPaymentSummary(
+      startDate: dates.$1,
+      endDate: dates.$2,
+    );
+  },
+);
+
+/// Órdenes con disputas en Stripe
+final stripeDisputedOrdersProvider = FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
+  final isAdmin = await ref.watch(isAdminProvider.future);
+  if (!isAdmin) throw Exception('Not authorized');
+  return ref.watch(stripeAdminServiceProvider).getDisputedOrders();
+});
+
+/// Estadísticas de reembolsos
+final stripeRefundStatsProvider = FutureProvider.family.autoDispose<Map<String, dynamic>, (DateTime, DateTime)>(
+  (ref, dates) async {
+    final isAdmin = await ref.watch(isAdminProvider.future);
+    if (!isAdmin) throw Exception('Not authorized');
+    return ref.watch(stripeAdminServiceProvider).getRefundStats(
+      startDate: dates.$1,
+      endDate: dates.$2,
+    );
+  },
+);

@@ -18,7 +18,7 @@ class AdminPanelScreen extends ConsumerStatefulWidget {
 }
 
 class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
-  int _selectedIndex = 0;
+  final int _selectedIndex = 0;
 
   final List<_AdminSection> _sections = [
     _AdminSection(icon: Icons.dashboard, label: 'Dash'),
@@ -1170,7 +1170,7 @@ class _SettingSwitch extends StatelessWidget {
           Switch(
             value: value,
             onChanged: onChanged,
-            activeColor: Colors.amber[700],
+            activeThumbColor: Colors.amber[700],
           ),
         ],
       ),
