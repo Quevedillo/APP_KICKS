@@ -27,7 +27,6 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
     AdminSection(icon: Icons.category, label: 'Categorías', key: 'categories'),
     AdminSection(icon: Icons.local_offer, label: 'Cupones', key: 'coupons'),
     AdminSection(icon: Icons.people, label: 'Usuarios', key: 'users'),
-    AdminSection(icon: Icons.email, label: 'Email', key: 'email'),
     AdminSection(icon: Icons.bar_chart, label: 'Finanzas', key: 'finance'),
     AdminSection(icon: Icons.settings, label: 'Config', key: 'settings'),
   ];
@@ -59,15 +58,30 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
       backgroundColor: Colors.black,
-      elevation: 2,
-      title: const Text(
-        'KICKSPREMIUM ADMIN',
-        style: TextStyle(
-          fontWeight: FontWeight.bold,
-          letterSpacing: 1.2,
-          fontSize: 16,
-          color: Colors.white,
-        ),
+      elevation: 0,
+      title: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Colors.blue.shade700, Colors.blue.shade500],
+              ),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(Icons.admin_panel_settings, color: Colors.white, size: 20),
+          ),
+          const SizedBox(width: 12),
+          const Text(
+            'Admin Panel',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              letterSpacing: 0.5,
+              fontSize: 18,
+              color: Colors.white,
+            ),
+          ),
+        ],
       ),
       actions: [
         IconButton(
@@ -81,6 +95,20 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
           onPressed: _showLogoutDialog,
         ),
       ],
+      bottom: PreferredSize(
+        preferredSize: const Size.fromHeight(1),
+        child: Container(
+          height: 1,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                Colors.blue.shade700,
+                Colors.transparent,
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -92,7 +120,6 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
       const AdminCategoriesMobile(),
       const AdminCouponsMobile(),
       const AdminUsersMobile(),
-      const AdminEmailsMobile(),
       const AdminFinanceMobile(),
       const AdminSettingsMobile(),
     ];
@@ -107,14 +134,17 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
   Widget _buildBottomNav(int selectedIndex) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.grey[900],
+        color: Colors.black,
         border: Border(
-          top: BorderSide(color: Colors.grey[800]!, width: 1),
+          top: BorderSide(
+            color: Colors.blue.withValues(alpha: 0.3),
+            width: 1,
+          ),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.3),
-            blurRadius: 10,
+            color: Colors.blue.withValues(alpha: 0.1),
+            blurRadius: 12,
             offset: const Offset(0, -2),
           ),
         ],
@@ -139,7 +169,7 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
                       border: Border(
                         bottom: BorderSide(
                           color: isSelected ? Colors.blue : Colors.transparent,
-                          width: 3,
+                          width: 2.5,
                         ),
                       ),
                     ),
@@ -148,16 +178,17 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
                       children: [
                         Icon(
                           section.icon,
-                          color: isSelected ? Colors.blue : Colors.grey,
-                          size: 24,
+                          color: isSelected ? Colors.blue : Colors.grey.shade600,
+                          size: 22,
                         ),
                         const SizedBox(height: 4),
                         Text(
                           section.label,
                           style: TextStyle(
-                            color: isSelected ? Colors.blue : Colors.grey,
-                            fontSize: 11,
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                            color: isSelected ? Colors.blue : Colors.grey.shade600,
+                            fontSize: 10,
+                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                            letterSpacing: 0.3,
                           ),
                         ),
                       ],
@@ -1329,17 +1360,6 @@ class AdminUsersMobile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return const Center(
       child: Text('Usuarios - En desarrollo', style: TextStyle(color: Colors.grey)),
-    );
-  }
-}
-
-class AdminEmailsMobile extends StatelessWidget {
-  const AdminEmailsMobile({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(
-      child: Text('Email - En desarrollo', style: TextStyle(color: Colors.grey)),
     );
   }
 }
