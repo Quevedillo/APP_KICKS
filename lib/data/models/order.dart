@@ -127,7 +127,7 @@ class Order {
       shippingName: json['shipping_name'] as String?,
       shippingEmail: json['shipping_email'] as String?,
       shippingPhone: json['shipping_phone'] as String?,
-      shippingAddress: json['shipping_address'] as Map<String, dynamic>?,
+      shippingAddress: _parseShippingAddress(json['shipping_address']),
       billingEmail: json['billing_email'] as String?,
       createdAt: json['created_at'] != null 
           ? DateTime.parse(json['created_at'] as String)
@@ -136,6 +136,20 @@ class Order {
           ? DateTime.parse(json['updated_at'] as String)
           : null,
     );
+  }
+
+  static Map<String, dynamic>? _parseShippingAddress(dynamic address) {
+    if (address == null) return null;
+    if (address is Map<String, dynamic>) return address;
+    if (address is String) {
+      try {
+        final decoded = jsonDecode(address);
+        if (decoded is Map<String, dynamic>) return decoded;
+      } catch (e) {
+        print('Error parsing shipping_address: $e');
+      }
+    }
+    return null;
   }
 
   static int _parseInt(dynamic value) {
@@ -180,4 +194,37 @@ class Order {
 
   bool get canCancel => ['pending', 'paid', 'processing'].contains(status);
   bool get canReturn => status == 'delivered' && returnStatus == null;
+
+  /// Generar datos para factura PDF
+  Map<String, dynamic> toInvoiceData() {
+    return {
+      'invoiceNumber': 'KP-$displayId',
+      'orderId': id,
+      'date': createdAt.toIso8601String(),
+      'customerName': shippingName ?? 'Cliente',
+      'customerEmail': shippingEmail ?? billingEmail ?? '',
+      'customerPhone': shippingPhone ?? '',
+      'shippingAddress': shippingAddress != null
+          ? [
+              shippingAddress!['line1'],
+              shippingAddress!['line2'],
+              '${shippingAddress!['postal_code']} ${shippingAddress!['city']}',
+              shippingAddress!['country'],
+            ].where((e) => e != null && e.toString().isNotEmpty).join(', ')
+          : '',
+      'items': items.map((item) => {
+        'name': item.productName,
+        'brand': item.productBrand,
+        'size': item.size,
+        'quantity': item.quantity,
+        'unitPrice': item.price / 100,
+        'total': (item.price * item.quantity) / 100,
+      }).toList(),
+      'subtotal': totalPrice / 100,
+      'discount': (discountAmount ?? 0) / 100,
+      'discountCode': discountCode,
+      'total': totalPrice / 100,
+      'status': statusLabel,
+    };
+  }
 }

@@ -5,6 +5,7 @@ import '../data/repositories/auth_repository.dart';
 import '../data/repositories/order_repository.dart';
 import '../data/repositories/email_repository.dart';
 import '../data/repositories/admin_repository.dart';
+import '../data/repositories/discount_repository.dart';
 import '../data/services/stripe_admin_service.dart';
 import '../data/models/product.dart';
 import '../data/models/category.dart';
@@ -37,6 +38,10 @@ final emailRepositoryProvider = Provider<EmailRepository>((ref) {
 
 final adminRepositoryProvider = Provider<AdminRepository>((ref) {
   return AdminRepository(ref.watch(supabaseClientProvider));
+});
+
+final discountRepositoryProvider = Provider<DiscountRepository>((ref) {
+  return DiscountRepository(ref.watch(supabaseClientProvider));
 });
 
 final stripeAdminServiceProvider = Provider<StripeAdminService>((ref) {

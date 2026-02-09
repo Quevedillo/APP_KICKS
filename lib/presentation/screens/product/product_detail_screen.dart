@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../data/models/product.dart';
 import '../../../logic/providers.dart';
+import '../../widgets/size_recommender.dart';
 
 final productBySlugProvider = FutureProvider.family<Product?, String>((ref, slug) async {
   return ref.watch(productRepositoryProvider).getProductBySlug(slug);
@@ -282,13 +283,54 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
 
                         // Size selector
                         if (hasAvailableSizes) ...[
-                          Text(
-                            'SELECCIONA TU TALLA (EU)',
-                            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                              color: Colors.grey,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 1,
-                            ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'SELECCIONA TU TALLA (EU)',
+                                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                  color: Colors.grey,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 1,
+                                ),
+                              ),
+                              TextButton.icon(
+                                onPressed: () {
+                                  SizeRecommenderWidget.show(
+                                    context,
+                                    onSizeSelected: (size) {
+                                      // Map recommended size to available EU sizes
+                                      final sizeMapping = {
+                                        'S': ['38', '39', '40'],
+                                        'M': ['40', '41', '42'],
+                                        'L': ['42', '43', '44'],
+                                        'XL': ['44', '45', '46'],
+                                      };
+                                      final euSizes = sizeMapping[size] ?? [];
+                                      // Select first matching available size
+                                      for (var euSize in euSizes) {
+                                        if (availableSizes.contains(euSize)) {
+                                          setState(() => _selectedSize = euSize);
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                              content: Text('Talla $euSize seleccionada'),
+                                              backgroundColor: Colors.green,
+                                            ),
+                                          );
+                                          break;
+                                        }
+                                      }
+                                    },
+                                  );
+                                },
+                                icon: const Icon(Icons.straighten, size: 16),
+                                label: const Text('¿No sabes tu talla?'),
+                                style: TextButton.styleFrom(
+                                  foregroundColor: Colors.amber,
+                                  textStyle: const TextStyle(fontSize: 12),
+                                ),
+                              ),
+                            ],
                           ),
                           const SizedBox(height: 12),
                           Wrap(

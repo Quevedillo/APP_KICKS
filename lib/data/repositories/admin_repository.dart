@@ -82,11 +82,88 @@ class AdminRepository {
         }
       }
 
+      // 7. Ingresos del mes actual
+      final firstDayOfMonth = DateTime(now.year, now.month, 1).toIso8601String();
+      final monthlyRevenueData = await _client
+          .from('orders')
+          .select('total_price')
+          .gte('created_at', firstDayOfMonth)
+          .or('status.eq.paid,status.eq.completed');
+
+      double monthlyRevenue = 0;
+      for (var order in monthlyRevenueData as List) {
+        final totalPrice = order['total_price'] as num?;
+        if (totalPrice != null) {
+          monthlyRevenue += totalPrice.toDouble();
+        }
+      }
+
+      // 8. Pedidos pendientes (pagados pero no enviados)
+      final pendingOrdersResponse = await _client
+          .from('orders')
+          .select('id')
+          .inFilter('status', ['paid', 'processing']);
+
+      // 9. Producto más vendido
+      String topProduct = 'Sin datos';
+      try {
+        final topProductData = await _client
+            .from('order_items')
+            .select('product_id, quantity, products(name)')
+            .order('quantity', ascending: false)
+            .limit(1);
+        
+        if ((topProductData as List).isNotEmpty) {
+          final product = topProductData[0]['products'];
+          if (product != null) {
+            topProduct = product['name'] ?? 'Sin datos';
+          }
+        }
+      } catch (e) {
+        // Fallback si hay error
+        topProduct = 'Sin datos';
+      }
+
+      // 10. Ventas de los últimos 7 días
+      final List<Map<String, dynamic>> salesLast7Days = [];
+      for (int i = 6; i >= 0; i--) {
+        final day = DateTime(now.year, now.month, now.day).subtract(Duration(days: i));
+        final nextDay = day.add(const Duration(days: 1));
+        
+        try {
+          final dayOrders = await _client
+              .from('orders')
+              .select('total_price')
+              .gte('created_at', day.toIso8601String())
+              .lt('created_at', nextDay.toIso8601String())
+              .or('status.eq.paid,status.eq.completed');
+
+          double dayTotal = 0;
+          for (var order in dayOrders as List) {
+            final totalPrice = order['total_price'] as num?;
+            if (totalPrice != null) {
+              dayTotal += totalPrice.toDouble();
+            }
+          }
+          
+          salesLast7Days.add({
+            'date': day.toIso8601String(),
+            'total': dayTotal / 100, // Centavos a euros
+          });
+        } catch (e) {
+          salesLast7Days.add({'date': day.toIso8601String(), 'total': 0.0});
+        }
+      }
+
       return {
         'ordersToday': (ordersTodayResponse as List).length,
         'paidOrdersToday': paidOrdersToday,
         'revenueToday': revenueToday / 100, // Centavos a moneda
         'totalRevenue': totalRevenue / 100, // Total histórico
+        'monthlyRevenue': monthlyRevenue / 100, // Ingresos del mes
+        'pendingOrders': (pendingOrdersResponse as List).length,
+        'topProduct': topProduct,
+        'salesLast7Days': salesLast7Days,
         'newUsersToday': (newUsersTodayResponse as List).length,
         'totalProducts': (totalProductsResponse as List).length,
         'lowStockProducts': lowStockCount,

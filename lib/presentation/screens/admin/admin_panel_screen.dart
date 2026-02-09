@@ -4,10 +4,9 @@ import 'package:go_router/go_router.dart';
 import '../../../logic/providers.dart';
 import '../../../data/models/order.dart';
 import '../../../data/models/product.dart';
-import '../../../data/models/user_profile.dart';
-import '../../../data/models/discount_code.dart';
 import '../../../data/models/category.dart';
 import 'package:intl/intl.dart';
+import 'package:fl_chart/fl_chart.dart';
 
 
 class AdminPanelScreen extends ConsumerStatefulWidget {
@@ -27,7 +26,6 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
     _AdminSection(icon: Icons.category, label: 'Cat'),
     _AdminSection(icon: Icons.local_offer, label: 'Cupones'),
     _AdminSection(icon: Icons.people, label: 'Users'),
-    _AdminSection(icon: Icons.email, label: 'Email'),
     _AdminSection(icon: Icons.bar_chart, label: 'Finanzas'),
     _AdminSection(icon: Icons.settings, label: 'Config'),
   ];
@@ -68,10 +66,8 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
       case 5:
         return const AdminUsersMobile();
       case 6:
-        return const AdminEmailsMobile();
-      case 7:
         return const AdminFinanceMobile();
-      case 8:
+      case 7:
         return const AdminSettingsMobile();
       default:
         return const AdminDashboardMobile();
@@ -82,56 +78,54 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
     return Container(
       decoration: BoxDecoration(
         color: Colors.grey[900],
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.3),
-            blurRadius: 10,
-            offset: const Offset(0, -2),
-          ),
-        ],
+        border: Border(top: BorderSide(color: Colors.grey[800]!, width: 0.5)),
       ),
       child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-          child: SingleChildScrollView(
+        child: SizedBox(
+          height: 60,
+          child: ListView.builder(
             scrollDirection: Axis.horizontal,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: List.generate(_sections.length, (index) {
-                final section = _sections[index];
-                final isSelected = selectedIndex == index;
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+            itemCount: _sections.length,
+            itemBuilder: (context, index) {
+              final section = _sections[index];
+              final isSelected = selectedIndex == index;
 
-                return GestureDetector(
-                  onTap: () => ref.read(adminSelectedSectionProvider.notifier).setSection(index),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: isSelected ? Colors.amber[700]!.withOpacity(0.2) : Colors.transparent,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          section.icon,
-                          color: isSelected ? Colors.amber[700] : Colors.grey,
-                          size: 24,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          section.label,
-                          style: TextStyle(
-                            color: isSelected ? Colors.amber[700] : Colors.grey,
-                            fontSize: 10,
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                          ),
-                        ),
-                      ],
-                    ),
+              return GestureDetector(
+                onTap: () => ref.read(adminSelectedSectionProvider.notifier).setSection(index),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeInOut,
+                  margin: const EdgeInsets.symmetric(horizontal: 3),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: isSelected ? Colors.amber[700] : Colors.transparent,
+                    borderRadius: BorderRadius.circular(12),
+                    border: isSelected ? null : Border.all(color: Colors.grey[700]!, width: 1),
                   ),
-                );
-              }),
-            ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        section.icon,
+                        color: isSelected ? Colors.black : Colors.grey[400],
+                        size: 20,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        section.label,
+                        style: TextStyle(
+                          color: isSelected ? Colors.black : Colors.grey[400],
+                          fontSize: 9,
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
           ),
         ),
       ),
@@ -225,6 +219,57 @@ class AdminDashboardMobile extends ConsumerWidget {
                   color: Colors.orange
                 ),
               ],
+            ),
+            
+            const SizedBox(height: 24),
+            
+            // KPI Cards Row
+            Row(
+              children: [
+                Expanded(
+                  child: _KPICard(
+                    title: 'Ventas del Mes',
+                    value: '€${stats['monthlyRevenue']?.toStringAsFixed(2) ?? '0.00'}',
+                    icon: Icons.trending_up,
+                    color: Colors.green,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _KPICard(
+                    title: 'Pedidos Pendientes',
+                    value: '${stats['pendingOrders'] ?? 0}',
+                    icon: Icons.pending_actions,
+                    color: Colors.orange,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            _KPICard(
+              title: 'Producto Más Vendido',
+              value: stats['topProduct'] ?? 'Sin datos',
+              icon: Icons.star,
+              color: Colors.amber,
+            ),
+            
+            const SizedBox(height: 24),
+            
+            // Sales Chart - Last 7 Days
+            const Text(
+              'Ventas Últimos 7 Días',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.amber),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              height: 200,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.grey[900],
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.grey[800]!),
+              ),
+              child: _SalesChart(salesData: stats['salesLast7Days'] ?? []),
             ),
             
             const SizedBox(height: 24),
@@ -1695,6 +1740,203 @@ class _FormEditField extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+// KPI Card Widget
+class _KPICard extends StatelessWidget {
+  final String title;
+  final String value;
+  final IconData icon;
+  final Color color;
+
+  const _KPICard({
+    required this.title,
+    required this.value,
+    required this.icon,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [color.withOpacity(0.2), color.withOpacity(0.1)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: color, size: 24),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(fontSize: 12, color: Colors.grey[400]),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: color,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// Sales Chart Widget using fl_chart
+class _SalesChart extends StatelessWidget {
+  final List<dynamic> salesData;
+
+  const _SalesChart({required this.salesData});
+
+  @override
+  Widget build(BuildContext context) {
+    // Generate chart data - if no data, use sample days
+    final List<BarChartGroupData> barGroups = [];
+    final weekDays = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+    
+    if (salesData.isEmpty) {
+      // Sample data for empty state
+      for (int i = 0; i < 7; i++) {
+        barGroups.add(
+          BarChartGroupData(
+            x: i,
+            barRods: [
+              BarChartRodData(
+                toY: (i + 1) * 50.0,
+                color: Colors.amber,
+                width: 20,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
+              ),
+            ],
+          ),
+        );
+      }
+    } else {
+      for (int i = 0; i < salesData.length && i < 7; i++) {
+        final value = (salesData[i]['total'] ?? 0).toDouble();
+        barGroups.add(
+          BarChartGroupData(
+            x: i,
+            barRods: [
+              BarChartRodData(
+                toY: value,
+                color: Colors.amber,
+                width: 20,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
+              ),
+            ],
+          ),
+        );
+      }
+    }
+
+    return BarChart(
+      BarChartData(
+        alignment: BarChartAlignment.spaceAround,
+        maxY: _getMaxY(),
+        barTouchData: BarTouchData(
+          enabled: true,
+          touchTooltipData: BarTouchTooltipData(
+            tooltipPadding: const EdgeInsets.all(8),
+            tooltipMargin: 8,
+            getTooltipItem: (group, groupIndex, rod, rodIndex) {
+              return BarTooltipItem(
+                '€${rod.toY.toStringAsFixed(0)}',
+                const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              );
+            },
+          ),
+        ),
+        titlesData: FlTitlesData(
+          show: true,
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              getTitlesWidget: (value, meta) {
+                final index = value.toInt();
+                if (index >= 0 && index < weekDays.length) {
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      weekDays[index],
+                      style: TextStyle(color: Colors.grey[400], fontSize: 10),
+                    ),
+                  );
+                }
+                return const SizedBox();
+              },
+              reservedSize: 30,
+            ),
+          ),
+          leftTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 40,
+              getTitlesWidget: (value, meta) {
+                return Text(
+                  '€${value.toInt()}',
+                  style: TextStyle(color: Colors.grey[500], fontSize: 10),
+                );
+              },
+            ),
+          ),
+          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        ),
+        gridData: FlGridData(
+          show: true,
+          drawVerticalLine: false,
+          horizontalInterval: 100,
+          getDrawingHorizontalLine: (value) {
+            return FlLine(
+              color: Colors.grey[800]!,
+              strokeWidth: 1,
+            );
+          },
+        ),
+        borderData: FlBorderData(show: false),
+        barGroups: barGroups,
+      ),
+    );
+  }
+
+  double _getMaxY() {
+    if (salesData.isEmpty) return 400;
+    double maxVal = 0;
+    for (var item in salesData) {
+      final val = (item['total'] ?? 0).toDouble();
+      if (val > maxVal) maxVal = val;
+    }
+    return maxVal == 0 ? 400 : maxVal * 1.2;
   }
 }
 

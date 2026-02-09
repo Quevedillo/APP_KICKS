@@ -2,8 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 import '../../../logic/providers.dart';
 import '../../../data/models/order.dart';
+import '../../widgets/credit_note.dart';
 
 class OrdersScreen extends ConsumerWidget {
   const OrdersScreen({super.key});
@@ -142,7 +146,7 @@ class OrdersScreen extends ConsumerWidget {
         padding: const EdgeInsets.all(16),
         itemCount: orders.length,
         itemBuilder: (context, index) {
-          return _OrderCard(order: orders[index]);
+          return _OrderCard(order: orders[index], ref: ref);
         },
       ),
     );
@@ -151,8 +155,9 @@ class OrdersScreen extends ConsumerWidget {
 
 class _OrderCard extends StatelessWidget {
   final Order order;
+  final WidgetRef ref;
 
-  const _OrderCard({required this.order});
+  const _OrderCard({required this.order, required this.ref});
 
   @override
   Widget build(BuildContext context) {
@@ -250,9 +255,11 @@ class _OrderCard extends StatelessWidget {
           if (order.shippingName != null || order.billingEmail != null)
             Container(
               padding: const EdgeInsets.all(16),
-              decoration: const BoxDecoration(
-                color: Color(0xFF0A0A0A),
-                borderRadius: BorderRadius.vertical(bottom: Radius.circular(12)),
+              decoration: BoxDecoration(
+                color: const Color(0xFF0A0A0A),
+                borderRadius: order.canCancel 
+                    ? BorderRadius.zero 
+                    : const BorderRadius.vertical(bottom: Radius.circular(12)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -290,9 +297,591 @@ class _OrderCard extends StatelessWidget {
                 ],
               ),
             ),
+
+          // Action buttons
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: const BoxDecoration(
+              color: Color(0xFF1A1A1A),
+              borderRadius: BorderRadius.vertical(bottom: Radius.circular(12)),
+            ),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    // Download Invoice Button
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () => _downloadInvoice(context),
+                        icon: const Icon(Icons.download, size: 18),
+                        label: const Text('Factura', style: TextStyle(fontSize: 12)),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.amber,
+                          side: const BorderSide(color: Colors.amber),
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    // Cancel Order Button (only if cancellable)
+                    if (order.canCancel)
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () => _showCancelDialog(context),
+                          icon: const Icon(Icons.cancel_outlined, size: 18),
+                          label: const Text('Cancelar', style: TextStyle(fontSize: 12)),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.red,
+                            side: const BorderSide(color: Colors.red),
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                          ),
+                        ),
+                      )
+                    // Return Request Button (only if delivered)
+                    else if (order.canReturn)
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () => _showReturnDialog(context),
+                          icon: const Icon(Icons.assignment_return, size: 18),
+                          label: const Text('Devolver', style: TextStyle(fontSize: 12)),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.orange,
+                            side: const BorderSide(color: Colors.orange),
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                          ),
+                        ),
+                      )
+                    else
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: null,
+                          icon: Icon(
+                            order.status == 'cancelled' ? Icons.cancel : Icons.check_circle,
+                            size: 18,
+                          ),
+                          label: Text(
+                            order.status == 'cancelled' ? 'Cancelado' : order.statusLabel,
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.grey,
+                            side: const BorderSide(color: Colors.grey),
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                // Credit Note Button - for refunded orders
+                if (order.status == 'refunded' || order.status == 'returned') ...[
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    child: CreditNoteButton(
+                      orderId: order.id,
+                      orderDisplayId: order.displayId,
+                      customerName: order.shippingName?.isNotEmpty == true
+                          ? order.shippingName!
+                          : 'Cliente',
+                      customerEmail: order.shippingEmail?.isNotEmpty == true
+                          ? order.shippingEmail!
+                          : 'N/A',
+                      refundAmount: order.totalPrice.toDouble(),
+                      reason: order.status == 'returned' 
+                          ? 'Devolución del pedido' 
+                          : 'Reembolso del pedido',
+                      items: order.items.map((item) => {
+                        'name': item.productName,
+                        'size': item.size ?? '-',
+                        'quantity': item.quantity,
+                        'price': item.price,
+                      }).toList(),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
         ],
       ),
     );
+  }
+
+  void _showReturnDialog(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: Colors.grey[900],
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.assignment_return, color: Colors.orange, size: 28),
+                ),
+                const SizedBox(width: 16),
+                const Expanded(
+                  child: Text(
+                    'Solicitar Devolución',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+
+            // Shipping Instructions
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.amber.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.amber.withOpacity(0.5)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.local_shipping, color: Colors.amber[700], size: 20),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Instrucciones de Envío',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.amber[700],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Debes enviar los artículos en su embalaje original a:',
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.black26,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'KICKSPREMIUM - Devoluciones',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        Text('Calle de la Moda 123'),
+                        Text('Polígono Industrial La Zapatilla'),
+                        Text('28000 Madrid, España'),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Email Confirmation
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.blue.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.blue.withOpacity(0.5)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.email, color: Colors.blue),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Text(
+                      'Recibirás un correo con la etiqueta de devolución y los siguientes pasos.',
+                      style: TextStyle(fontSize: 13),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Refund Information
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.green.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.green.withOpacity(0.5)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.info_outline, color: Colors.green),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'Información de Reembolso',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.green,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Una vez recibido y validado el paquete, el reembolso se procesará en tu método de pago original en un plazo de 5 a 7 días hábiles.',
+                    style: TextStyle(fontSize: 13, color: Colors.grey),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // Submit Button
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () async {
+                  Navigator.pop(context);
+                  await _requestReturn(context);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text(
+                  'SOLICITAR DEVOLUCIÓN',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Cancel Button
+            SizedBox(
+              width: double.infinity,
+              child: TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancelar'),
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _requestReturn(BuildContext context) async {
+    try {
+      final orderRepo = ref.read(orderRepositoryProvider);
+      final emailRepo = ref.read(emailRepositoryProvider);
+      
+      final success = await orderRepo.requestReturn(
+        order.id,
+        'Solicitud de devolución del cliente',
+      );
+      
+      if (success) {
+        // Enviar email de confirmación
+        await emailRepo.sendOrderStatusUpdate(
+          order.billingEmail ?? order.shippingEmail ?? '',
+          order.displayId,
+          'devolución solicitada',
+          null,
+        );
+
+        ref.invalidate(userOrdersProvider);
+        
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Solicitud de devolución enviada. Revisa tu email.'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } else {
+        throw Exception('No se pudo procesar la solicitud');
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _downloadInvoice(BuildContext context) async {
+    try {
+      final pdf = pw.Document();
+      final invoiceData = order.toInvoiceData();
+      final currencyFormat = NumberFormat.currency(locale: 'es_ES', symbol: '€');
+      
+      pdf.addPage(
+        pw.Page(
+          pageFormat: PdfPageFormat.a4,
+          build: (pw.Context context) {
+            return pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                // Header
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text('KICKSPREMIUM', 
+                          style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold)),
+                        pw.Text('Factura de Compra', style: const pw.TextStyle(color: PdfColors.grey)),
+                      ],
+                    ),
+                    pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.end,
+                      children: [
+                        pw.Text('Factura: ${invoiceData['invoiceNumber']}', 
+                          style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                        pw.Text('Fecha: ${DateFormat('dd/MM/yyyy').format(order.createdAt)}'),
+                      ],
+                    ),
+                  ],
+                ),
+                pw.SizedBox(height: 30),
+                
+                // Customer Info
+                pw.Container(
+                  padding: const pw.EdgeInsets.all(15),
+                  decoration: pw.BoxDecoration(
+                    color: PdfColors.grey100,
+                    borderRadius: pw.BorderRadius.circular(8),
+                  ),
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Text('Datos del Cliente', 
+                        style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                      pw.SizedBox(height: 8),
+                      pw.Text('Nombre: ${invoiceData['customerName']}'),
+                      pw.Text('Email: ${invoiceData['customerEmail']}'),
+                      if (invoiceData['customerPhone'].isNotEmpty)
+                        pw.Text('Teléfono: ${invoiceData['customerPhone']}'),
+                      if (invoiceData['shippingAddress'].isNotEmpty)
+                        pw.Text('Dirección: ${invoiceData['shippingAddress']}'),
+                    ],
+                  ),
+                ),
+                pw.SizedBox(height: 20),
+                
+                // Items Table Header
+                pw.Container(
+                  padding: const pw.EdgeInsets.symmetric(vertical: 10, horizontal: 10),
+                  color: PdfColors.amber,
+                  child: pw.Row(
+                    children: [
+                      pw.Expanded(flex: 3, child: pw.Text('Producto', 
+                        style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
+                      pw.Expanded(child: pw.Text('Talla', 
+                        style: pw.TextStyle(fontWeight: pw.FontWeight.bold), 
+                        textAlign: pw.TextAlign.center)),
+                      pw.Expanded(child: pw.Text('Cant.', 
+                        style: pw.TextStyle(fontWeight: pw.FontWeight.bold), 
+                        textAlign: pw.TextAlign.center)),
+                      pw.Expanded(child: pw.Text('Precio', 
+                        style: pw.TextStyle(fontWeight: pw.FontWeight.bold), 
+                        textAlign: pw.TextAlign.right)),
+                      pw.Expanded(child: pw.Text('Total', 
+                        style: pw.TextStyle(fontWeight: pw.FontWeight.bold), 
+                        textAlign: pw.TextAlign.right)),
+                    ],
+                  ),
+                ),
+                
+                // Items
+                ...((invoiceData['items'] as List).map((item) => pw.Container(
+                  padding: const pw.EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+                  decoration: const pw.BoxDecoration(
+                    border: pw.Border(bottom: pw.BorderSide(color: PdfColors.grey300)),
+                  ),
+                  child: pw.Row(
+                    children: [
+                      pw.Expanded(flex: 3, child: pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
+                        children: [
+                          pw.Text(item['name'], style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                          pw.Text(item['brand'], style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey)),
+                        ],
+                      )),
+                      pw.Expanded(child: pw.Text(item['size'], textAlign: pw.TextAlign.center)),
+                      pw.Expanded(child: pw.Text('${item['quantity']}', textAlign: pw.TextAlign.center)),
+                      pw.Expanded(child: pw.Text(currencyFormat.format(item['unitPrice']), 
+                        textAlign: pw.TextAlign.right)),
+                      pw.Expanded(child: pw.Text(currencyFormat.format(item['total']), 
+                        textAlign: pw.TextAlign.right)),
+                    ],
+                  ),
+                ))),
+                
+                pw.SizedBox(height: 20),
+                
+                // Totals
+                pw.Container(
+                  alignment: pw.Alignment.centerRight,
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.end,
+                    children: [
+                      if ((invoiceData['discount'] as double) > 0) ...[
+                        pw.Text('Subtotal: ${currencyFormat.format(invoiceData['subtotal'] + invoiceData['discount'])}'),
+                        pw.Text('Descuento (${invoiceData['discountCode']}): -${currencyFormat.format(invoiceData['discount'])}',
+                          style: const pw.TextStyle(color: PdfColors.green)),
+                      ],
+                      pw.SizedBox(height: 8),
+                      pw.Text('TOTAL: ${currencyFormat.format(invoiceData['total'])}',
+                        style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
+                    ],
+                  ),
+                ),
+                
+                pw.SizedBox(height: 40),
+                
+                // Footer
+                pw.Container(
+                  padding: const pw.EdgeInsets.all(15),
+                  decoration: pw.BoxDecoration(
+                    border: pw.Border.all(color: PdfColors.grey300),
+                    borderRadius: pw.BorderRadius.circular(8),
+                  ),
+                  child: pw.Column(
+                    children: [
+                      pw.Text('¡Gracias por tu compra!', 
+                        style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                      pw.SizedBox(height: 5),
+                      pw.Text('Si tienes alguna pregunta, contáctanos en support@kickspremium.com',
+                        style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey)),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      );
+
+      await Printing.layoutPdf(
+        onLayout: (PdfPageFormat format) async => pdf.save(),
+        name: 'Factura_${invoiceData['invoiceNumber']}.pdf',
+      );
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error generando factura: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _showCancelDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.grey[900],
+        title: const Text('Cancelar Pedido'),
+        content: Text(
+          '¿Estás seguro de que deseas cancelar el pedido #${order.displayId}?\n\n'
+          'El reembolso se procesará automáticamente.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('No, mantener'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              await _cancelOrder(context);
+            },
+            child: const Text('Sí, cancelar', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _cancelOrder(BuildContext context) async {
+    try {
+      final orderRepo = ref.read(orderRepositoryProvider);
+      final emailRepo = ref.read(emailRepositoryProvider);
+      
+      final success = await orderRepo.cancelOrder(order.id);
+      
+      if (success) {
+        // Enviar email de cancelación
+        await emailRepo.sendOrderStatusUpdate(
+          order.billingEmail ?? order.shippingEmail ?? '',
+          order.displayId,
+          'cancelado',
+          null,
+        );
+
+        ref.invalidate(userOrdersProvider);
+        
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Pedido cancelado. Recibirás un email de confirmación.'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } else {
+        throw Exception('No se pudo cancelar el pedido');
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al cancelar: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   String _formatAddress(Map<String, dynamic> address) {

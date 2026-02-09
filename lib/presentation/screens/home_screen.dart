@@ -3,12 +3,33 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../logic/providers.dart';
 import '../widgets/product_card.dart';
+import '../widgets/newsletter_popup.dart';
+import '../widgets/live_search.dart';
 
-class HomeScreen extends ConsumerWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends ConsumerState<HomeScreen> {
+  bool _popupShown = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Mostrar el popup de newsletter después de que se cargue la pantalla
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_popupShown) {
+        _popupShown = true;
+        NewsletterPopup.showIfNeeded(context, ref);
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final categoriesAsync = ref.watch(categoriesProvider);
     final productsAsync = ref.watch(productsProvider(null));
     final user = ref.watch(userProvider);
@@ -442,39 +463,7 @@ class HomeScreen extends ConsumerWidget {
   }
 
   void _showSearchDialog(BuildContext context, WidgetRef ref) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1C1C1C),
-        title: const Text('Buscar'),
-        content: TextField(
-          autofocus: true,
-          decoration: InputDecoration(
-            hintText: 'Buscar sneakers...',
-            prefixIcon: const Icon(Icons.search),
-            filled: true,
-            fillColor: const Color(0xFF0A0A0A),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide.none,
-            ),
-          ),
-          onSubmitted: (query) {
-            Navigator.of(ctx).pop();
-            // TODO: Implement search screen
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Buscando: $query')),
-            );
-          },
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('CANCELAR'),
-          ),
-        ],
-      ),
-    );
+    LiveSearchWidget.show(context);
   }
 }
 

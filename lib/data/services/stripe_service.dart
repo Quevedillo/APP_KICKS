@@ -7,7 +7,7 @@ import 'dart:async';
 
 class StripeService {
   static String get publicKey => dotenv.env['PUBLIC_STRIPE_PUBLIC_KEY'] ?? '';
-  static String get _backendUrl => dotenv.env['BACKEND_URL'] ?? 'http://localhost:3000';
+  static String get _stripeSecretKey => dotenv.env['STRIPE_SECRET_KEY'] ?? '';
 
   static Future<void> init() async {
     final key = publicKey;
@@ -26,6 +26,7 @@ class StripeService {
     }
   }
 
+  /// Crea un PaymentIntent directamente usando la API de Stripe
   static Future<Map<String, dynamic>> createPaymentIntent({
     required int amount,
     required String currency,
@@ -34,38 +35,62 @@ class StripeService {
   }) async {
     if (amount <= 0) throw Exception('Monto debe ser mayor a 0');
     if (orderId.isEmpty) throw Exception('orderId vacío');
+    if (_stripeSecretKey.isEmpty) throw Exception('STRIPE_SECRET_KEY no configurada');
 
-    final url = Uri.parse('$_backendUrl/api/stripe/create-payment-intent');
+    final url = Uri.parse('https://api.stripe.com/v1/payment_intents');
     
     try {
-      final response = await http
-          .post(
-            url,
-            headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({
-              'amount': amount,
-              'currency': currency,
-              'orderId': orderId,
-              'metadata': metadata ?? {},
-            }),
-          )
-          .timeout(const Duration(seconds: 30));
+      // Preparar body en formato form-urlencoded
+      final bodyParams = {
+        'amount': amount.toString(),
+        'currency': currency,
+        'automatic_payment_methods[enabled]': 'true',
+        'metadata[orderId]': orderId,
+      };
+      
+      // Añadir metadatos adicionales
+      if (metadata != null) {
+        metadata.forEach((key, value) {
+          bodyParams['metadata[$key]'] = value;
+        });
+      }
+
+      final response = await http.post(
+        url,
+        headers: {
+          'Authorization': 'Bearer $_stripeSecretKey',
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: bodyParams,
+      ).timeout(const Duration(seconds: 30));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
-        if (data.containsKey('clientSecret')) {
-          return data;
+        
+        if (data.containsKey('client_secret')) {
+          return {
+            'clientSecret': data['client_secret'],
+            'paymentIntentId': data['id'],
+          };
         }
-        throw Exception('clientSecret no recibido');
+        throw Exception('client_secret no recibido');
       }
-
-      throw Exception('HTTP ${response.statusCode}: ${response.body}');
+      
+      // Parsear error de Stripe
+      try {
+        final errorData = jsonDecode(response.body);
+        final errorMsg = errorData['error']?['message'] ?? 'Error desconocido';
+        throw Exception('Stripe error: $errorMsg');
+      } catch (_) {
+        throw Exception('HTTP ${response.statusCode}: ${response.body}');
+      }
     } on TimeoutException {
-      throw Exception('Timeout: servidor no responde');
-    } on FormatException catch (e) {
-      throw Exception('JSON inválido: $e');
+      throw Exception('Timeout: Stripe no responde');
     } on http.ClientException catch (e) {
-      throw Exception('Error conexión: $e');
+      throw Exception('Error de conexión: $e');
+    } catch (e) {
+      debugPrint('Error createPaymentIntent: $e');
+      rethrow;
     }
   }
 
@@ -110,17 +135,21 @@ class StripeService {
 
   static Future<bool> refundPayment({required String paymentIntentId}) async {
     if (paymentIntentId.isEmpty) throw Exception('paymentIntentId vacío');
+    if (_stripeSecretKey.isEmpty) throw Exception('STRIPE_SECRET_KEY no configurada');
 
-    final url = Uri.parse('$_backendUrl/api/stripe/refund');
+    final url = Uri.parse('https://api.stripe.com/v1/refunds');
 
     try {
-      final response = await http
-          .post(
-            url,
-            headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({'paymentIntentId': paymentIntentId}),
-          )
-          .timeout(const Duration(seconds: 30));
+      final response = await http.post(
+        url,
+        headers: {
+          'Authorization': 'Bearer $_stripeSecretKey',
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: {
+          'payment_intent': paymentIntentId,
+        },
+      ).timeout(const Duration(seconds: 30));
 
       if (response.statusCode == 200) {
         return true;

@@ -142,6 +142,12 @@ class ProfileScreen extends ConsumerWidget {
             ),
             
             _ActionButton(
+              icon: Icons.lock_outline,
+              label: 'Cambiar Contraseña',
+              onTap: () => context.push('/change-password'),
+            ),
+            
+            _ActionButton(
               icon: Icons.shopping_bag,
               label: 'Ver Carrito',
               onTap: () => context.push('/cart'),

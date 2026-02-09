@@ -9,6 +9,7 @@ import 'screens/cart/cart_screen.dart';
 import 'screens/checkout/checkout_screen.dart';
 import 'screens/orders/orders_screen.dart';
 import 'screens/profile/profile_screen.dart';
+import 'screens/profile/change_password_screen.dart';
 import 'screens/admin/admin_panel_screen.dart';
 import 'widgets/main_scaffold.dart';
 
@@ -72,6 +73,10 @@ final goRouter = GoRouter(
     GoRoute(
       path: '/register',
       builder: (context, state) => const RegisterScreen(),
+    ),
+    GoRoute(
+      path: '/change-password',
+      builder: (context, state) => const ChangePasswordScreen(),
     ),
     GoRoute(
       path: '/admin',
