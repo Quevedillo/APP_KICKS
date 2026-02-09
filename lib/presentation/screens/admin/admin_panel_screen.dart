@@ -17,7 +17,6 @@ class AdminPanelScreen extends ConsumerStatefulWidget {
 }
 
 class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
-  final int _selectedIndex = 0;
 
   final List<_AdminSection> _sections = [
     _AdminSection(icon: Icons.dashboard, label: 'Dash'),
@@ -82,50 +81,50 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
       ),
       child: SafeArea(
         child: SizedBox(
-          height: 60,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-            itemCount: _sections.length,
-            itemBuilder: (context, index) {
+          height: 56,
+          child: Row(
+            children: List.generate(_sections.length, (index) {
               final section = _sections[index];
               final isSelected = selectedIndex == index;
 
-              return GestureDetector(
-                onTap: () => ref.read(adminSelectedSectionProvider.notifier).setSection(index),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  curve: Curves.easeInOut,
-                  margin: const EdgeInsets.symmetric(horizontal: 3),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: isSelected ? Colors.amber[700] : Colors.transparent,
-                    borderRadius: BorderRadius.circular(12),
-                    border: isSelected ? null : Border.all(color: Colors.grey[700]!, width: 1),
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        section.icon,
-                        color: isSelected ? Colors.black : Colors.grey[400],
-                        size: 20,
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        section.label,
-                        style: TextStyle(
+              return Expanded(
+                child: GestureDetector(
+                  onTap: () => ref.read(adminSelectedSectionProvider.notifier).setSection(index),
+                  behavior: HitTestBehavior.opaque,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    curve: Curves.easeInOut,
+                    margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: isSelected ? Colors.amber[700] : Colors.transparent,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          section.icon,
                           color: isSelected ? Colors.black : Colors.grey[400],
-                          fontSize: 9,
-                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                          size: 18,
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 1),
+                        Text(
+                          section.label,
+                          style: TextStyle(
+                            color: isSelected ? Colors.black : Colors.grey[400],
+                            fontSize: 8,
+                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               );
-            },
+            }),
           ),
         ),
       ),
@@ -1031,61 +1030,62 @@ class AdminCouponsMobile extends ConsumerWidget {
 }
 
 // ========== FINANCE MOBILE ==========
-class AdminFinanceMobile extends StatelessWidget {
+class AdminFinanceMobile extends ConsumerWidget {
   const AdminFinanceMobile({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('Finanzas', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 16),
-          
-          GridView.count(
-            crossAxisCount: 2,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final statsAsync = ref.watch(adminDashboardStatsProvider);
+
+    return statsAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (err, stack) => Center(child: Text('Error: $err')),
+      data: (stats) {
+        final totalRevenue = stats['totalRevenue'] ?? 0.0;
+        final monthlyRevenue = stats['monthlyRevenue'] ?? 0.0;
+        final totalOrders = (stats['ordersToday'] ?? 0) + (stats['pendingOrders'] ?? 0);
+        final avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0.0;
+
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _ReportCard(title: 'Ventas Mensuales', value: '€45,230', icon: Icons.trending_up, color: Colors.green),
-              _ReportCard(title: 'Bruto Total', value: '€128,450', icon: Icons.account_balance_wallet, color: Colors.blue),
-              _ReportCard(title: 'Ticket Medio', value: '€245', icon: Icons.shopping_cart, color: Colors.purple),
-              _ReportCard(title: 'Gastos Envío', value: '€1,240', icon: Icons.local_shipping, color: Colors.orange),
+              const Text('Finanzas', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
+              
+              GridView.count(
+                crossAxisCount: 2,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                children: [
+                  _ReportCard(title: 'Ventas Mensuales', value: '€${monthlyRevenue.toStringAsFixed(2)}', icon: Icons.trending_up, color: Colors.green),
+                  _ReportCard(title: 'Total Histórico', value: '€${totalRevenue.toStringAsFixed(2)}', icon: Icons.account_balance_wallet, color: Colors.blue),
+                  _ReportCard(title: 'Ticket Medio', value: '€${avgOrderValue.toStringAsFixed(2)}', icon: Icons.shopping_cart, color: Colors.purple),
+                  _ReportCard(title: 'Pedidos Pendientes', value: '${stats['pendingOrders'] ?? 0}', icon: Icons.pending_actions, color: Colors.orange),
+                ],
+              ),
+              
+              const SizedBox(height: 24),
+              const Text('Ventas Últimos 7 Días', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 12),
+              
+              Container(
+                height: 200,
+                decoration: BoxDecoration(
+                  color: Colors.grey[900],
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey[800]!),
+                ),
+                padding: const EdgeInsets.all(16),
+                child: _SalesChart(salesData: stats['salesLast7Days'] ?? []),
+              ),
             ],
           ),
-          
-          const SizedBox(height: 24),
-          const Text('Ingresos Recientes', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 12),
-          
-          // Dummy chart representation
-          Container(
-            height: 200,
-            decoration: BoxDecoration(
-              color: Colors.grey[900],
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey[800]!),
-            ),
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: List.generate(7, (index) => Container(
-                width: 20,
-                height: (index + 2) * 20.0,
-                decoration: BoxDecoration(
-                  color: Colors.amber[700]!.withOpacity(0.7),
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
-                ),
-              )),
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

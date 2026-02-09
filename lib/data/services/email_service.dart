@@ -1,4 +1,6 @@
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:mailer/mailer.dart';
+import 'package:mailer/smtp_server.dart';
 
 class EmailService {
   final String smtpHost = dotenv.env['SMTP_HOST'] ?? '';
@@ -7,6 +9,21 @@ class EmailService {
   final String smtpPass = dotenv.env['SMTP_PASS'] ?? '';
   final String fromEmail = dotenv.env['FROM_EMAIL'] ?? '';
   final String adminEmail = dotenv.env['ADMIN_EMAIL'] ?? '';
+
+  /// Obtener servidor SMTP configurado
+  SmtpServer _getSmtpServer() {
+    if (smtpHost == 'smtp.gmail.com') {
+      return gmail(smtpUser, smtpPass);
+    }
+    return SmtpServer(
+      smtpHost,
+      port: int.tryParse(smtpPort) ?? 587,
+      username: smtpUser,
+      password: smtpPass,
+      ssl: false,
+      allowInsecure: false,
+    );
+  }
 
   /// Enviar email de bienvenida a nuevo usuario
   Future<bool> sendWelcomeEmail(String userEmail, String userName) async {
@@ -126,7 +143,7 @@ class EmailService {
     );
   }
 
-  /// Función genérica para enviar emails
+  /// Función genérica para enviar emails via SMTP
   Future<bool> _sendEmail({
     required String to,
     String? cc,
@@ -134,11 +151,34 @@ class EmailService {
     required String htmlBody,
   }) async {
     try {
-      // TODO: Implementar con servicio SMTP real (nodemailer, Resend, SendGrid, etc)
-      // Por ahora, retorna true para demostración
-      print('📧 Email enviado a: $to');
-      print('Asunto: $subject');
+      if (smtpUser.isEmpty || smtpPass.isEmpty) {
+        print('❌ SMTP no configurado: faltan credenciales en env');
+        return false;
+      }
+
+      final smtpServer = _getSmtpServer();
+
+      final message = Message()
+        ..from = Address(fromEmail.isNotEmpty ? fromEmail : smtpUser, 'KicksPremium')
+        ..recipients.add(to)
+        ..subject = subject
+        ..html = htmlBody;
+
+      if (cc != null && cc.isNotEmpty) {
+        message.ccRecipients.add(cc);
+      }
+
+      final sendReport = await send(message, smtpServer);
+      print('📧 Email enviado correctamente a: $to');
+      print('   Asunto: $subject');
+      print('   Report: $sendReport');
       return true;
+    } on MailerException catch (e) {
+      print('❌ Error SMTP al enviar email: ${e.message}');
+      for (var p in e.problems) {
+        print('   Problema: ${p.code}: ${p.msg}');
+      }
+      return false;
     } catch (e) {
       print('❌ Error al enviar email: $e');
       return false;

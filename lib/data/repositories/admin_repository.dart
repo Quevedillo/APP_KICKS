@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/order.dart';
 import '../models/product.dart';
@@ -104,20 +105,49 @@ class AdminRepository {
           .select('id')
           .inFilter('status', ['paid', 'processing']);
 
-      // 9. Producto más vendido
+      // 9. Producto más vendido (calculado desde items JSONB en orders)
       String topProduct = 'Sin datos';
       try {
-        final topProductData = await _client
-            .from('order_items')
-            .select('product_id, quantity, products(name)')
-            .order('quantity', ascending: false)
-            .limit(1);
+        final allPaidOrders = await _client
+            .from('orders')
+            .select('items')
+            .or('status.eq.paid,status.eq.completed');
+
+        // Contar cantidad vendida por producto
+        final Map<String, int> productCount = {};
+        final Map<String, String> productNames = {};
         
-        if ((topProductData as List).isNotEmpty) {
-          final product = topProductData[0]['products'];
-          if (product != null) {
-            topProduct = product['name'] ?? 'Sin datos';
+        for (var order in allPaidOrders as List) {
+          final itemsData = order['items'];
+          List<dynamic> items = [];
+          
+          if (itemsData is String && itemsData.isNotEmpty) {
+            try {
+              final decoded = jsonDecode(itemsData);
+              if (decoded is List) items = decoded;
+            } catch (_) {}
+          } else if (itemsData is List) {
+            items = itemsData;
           }
+          
+          for (var item in items) {
+            if (item is Map<String, dynamic>) {
+              final name = item['name'] as String? ?? '';
+              final qty = (item['quantity'] as num?)?.toInt() ?? 1;
+              final productId = item['product_id'] as String? ?? name;
+              if (name.isNotEmpty) {
+                productCount[productId] = (productCount[productId] ?? 0) + qty;
+                productNames[productId] = name;
+              }
+            }
+          }
+        }
+        
+        if (productCount.isNotEmpty) {
+          final topId = productCount.entries
+              .reduce((a, b) => a.value >= b.value ? a : b)
+              .key;
+          topProduct = productNames[topId] ?? 'Sin datos';
         }
       } catch (e) {
         // Fallback si hay error

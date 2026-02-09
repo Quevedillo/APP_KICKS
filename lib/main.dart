@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'presentation/router.dart';
 import 'core/theme/app_theme.dart';
+import 'data/services/stripe_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,6 +27,9 @@ Future<void> main() async {
     } else {
       print('❌ Warning: Supabase credentials not found in assets/env');
     }
+
+    // Inicializar Stripe
+    await StripeService.init();
   } catch (e) {
     print('❌ Error during initialization: $e');
   }
