@@ -25,7 +25,7 @@ class AdminRepository {
       // 1. Pedidos de hoy (validados: pagados/procesando)
       final ordersTodayResponse = await _client
           .from('orders')
-          .select('id, status, total_price, stripe_session_id')
+          .select('id, status, total_amount, stripe_session_id')
           .gte('created_at', today)
           .or('status.eq.paid,status.eq.completed,status.eq.processing,status.eq.shipped');
 
@@ -33,11 +33,11 @@ class AdminRepository {
       int paidOrdersToday = 0;
 
       for (var order in ordersTodayResponse as List) {
-        final totalPrice = order['total_price'] as num?;
+        final totalAmount = order['total_amount'] as num?;
         final status = order['status'] as String?;
 
-        if (totalPrice != null && (status == 'paid' || status == 'completed')) {
-          revenueToday += totalPrice.toDouble();
+        if (totalAmount != null && (status == 'paid' || status == 'completed')) {
+          revenueToday += totalAmount.toDouble();
           paidOrdersToday++;
         }
       }
@@ -72,14 +72,14 @@ class AdminRepository {
       // 6. Ingresos totales (todos los tiempos, pagos confirmados)
       final totalRevenueData = await _client
           .from('orders')
-          .select('total_price')
+          .select('total_amount')
           .or('status.eq.paid,status.eq.completed');
 
       double totalRevenue = 0;
       for (var order in totalRevenueData as List) {
-        final totalPrice = order['total_price'] as num?;
-        if (totalPrice != null) {
-          totalRevenue += totalPrice.toDouble();
+        final totalAmount = order['total_amount'] as num?;
+        if (totalAmount != null) {
+          totalRevenue += totalAmount.toDouble();
         }
       }
 
@@ -87,15 +87,15 @@ class AdminRepository {
       final firstDayOfMonth = DateTime(now.year, now.month, 1).toIso8601String();
       final monthlyRevenueData = await _client
           .from('orders')
-          .select('total_price')
+          .select('total_amount')
           .gte('created_at', firstDayOfMonth)
           .or('status.eq.paid,status.eq.completed');
 
       double monthlyRevenue = 0;
       for (var order in monthlyRevenueData as List) {
-        final totalPrice = order['total_price'] as num?;
-        if (totalPrice != null) {
-          monthlyRevenue += totalPrice.toDouble();
+        final totalAmount = order['total_amount'] as num?;
+        if (totalAmount != null) {
+          monthlyRevenue += totalAmount.toDouble();
         }
       }
 
@@ -163,16 +163,16 @@ class AdminRepository {
         try {
           final dayOrders = await _client
               .from('orders')
-              .select('total_price')
+              .select('total_amount')
               .gte('created_at', day.toIso8601String())
               .lt('created_at', nextDay.toIso8601String())
               .or('status.eq.paid,status.eq.completed');
 
           double dayTotal = 0;
           for (var order in dayOrders as List) {
-            final totalPrice = order['total_price'] as num?;
-            if (totalPrice != null) {
-              dayTotal += totalPrice.toDouble();
+            final totalAmount = order['total_amount'] as num?;
+            if (totalAmount != null) {
+              dayTotal += totalAmount.toDouble();
             }
           }
           
@@ -185,12 +185,111 @@ class AdminRepository {
         }
       }
 
+      // 11. Ingresos últimas 24h
+      final since24h = now.subtract(const Duration(hours: 24)).toIso8601String();
+      final rev24hData = await _client
+          .from('orders')
+          .select('total_amount')
+          .gte('created_at', since24h)
+          .or('status.eq.paid,status.eq.completed');
+      double revenue24h = 0;
+      int orders24h = 0;
+      for (var o in rev24hData as List) {
+        final a = o['total_amount'] as num?;
+        if (a != null) { revenue24h += a.toDouble(); orders24h++; }
+      }
+
+      // 12. Ingresos últimos 7 días
+      final since7d = now.subtract(const Duration(days: 7)).toIso8601String();
+      final rev7dData = await _client
+          .from('orders')
+          .select('total_amount')
+          .gte('created_at', since7d)
+          .or('status.eq.paid,status.eq.completed');
+      double revenue7d = 0;
+      int orders7d = 0;
+      for (var o in rev7dData as List) {
+        final a = o['total_amount'] as num?;
+        if (a != null) { revenue7d += a.toDouble(); orders7d++; }
+      }
+
+      // 13. Pedidos totales (todos los tiempos)
+      final allOrdersCount = await _client
+          .from('orders')
+          .select('id')
+          .or('status.eq.paid,status.eq.completed');
+
+      // 14. Calcular costes y beneficios estimados desde products.cost_price
+      double totalCostEstimate = 0;
+      try {
+        final allPaidOrdersForCost = await _client
+            .from('orders')
+            .select('items')
+            .or('status.eq.paid,status.eq.completed');
+
+        // Collect all product IDs
+        final Set<String> productIds = {};
+        for (var order in allPaidOrdersForCost as List) {
+          final itemsData = order['items'];
+          List<dynamic> items = [];
+          if (itemsData is String && itemsData.isNotEmpty) {
+            try { items = jsonDecode(itemsData); } catch (_) {}
+          } else if (itemsData is List) {
+            items = itemsData;
+          }
+          for (var item in items) {
+            if (item is Map<String, dynamic> && item['product_id'] != null) {
+              productIds.add(item['product_id'].toString());
+            }
+          }
+        }
+
+        // Get cost prices for products
+        final Map<String, int> costMap = {};
+        if (productIds.isNotEmpty) {
+          final productsData = await _client
+              .from('products')
+              .select('id, cost_price')
+              .inFilter('id', productIds.toList());
+          for (var p in productsData as List) {
+            final cp = p['cost_price'] as int?;
+            if (cp != null) costMap[p['id']] = cp;
+          }
+        }
+
+        // Calculate total cost
+        for (var order in allPaidOrdersForCost as List) {
+          final itemsData = order['items'];
+          List<dynamic> items = [];
+          if (itemsData is String && itemsData.isNotEmpty) {
+            try { items = jsonDecode(itemsData); } catch (_) {}
+          } else if (itemsData is List) {
+            items = itemsData;
+          }
+          for (var item in items) {
+            if (item is Map<String, dynamic>) {
+              final pid = item['product_id']?.toString() ?? '';
+              final qty = (item['quantity'] as num?)?.toInt() ?? 1;
+              final cost = costMap[pid] ?? 0;
+              totalCostEstimate += cost * qty;
+            }
+          }
+        }
+      } catch (_) {}
+
       return {
         'ordersToday': (ordersTodayResponse as List).length,
         'paidOrdersToday': paidOrdersToday,
-        'revenueToday': revenueToday / 100, // Centavos a moneda
-        'totalRevenue': totalRevenue / 100, // Total histórico
-        'monthlyRevenue': monthlyRevenue / 100, // Ingresos del mes
+        'revenueToday': revenueToday / 100,
+        'totalRevenue': totalRevenue / 100,
+        'monthlyRevenue': monthlyRevenue / 100,
+        'revenue24h': revenue24h / 100,
+        'revenue7d': revenue7d / 100,
+        'orders24h': orders24h,
+        'orders7d': orders7d,
+        'totalOrdersAllTime': (allOrdersCount as List).length,
+        'totalCost': totalCostEstimate / 100,
+        'totalProfit': (totalRevenue - totalCostEstimate) / 100,
         'pendingOrders': (pendingOrdersResponse as List).length,
         'topProduct': topProduct,
         'salesLast7Days': salesLast7Days,
@@ -280,6 +379,27 @@ class AdminRepository {
       return true;
     } catch (e) {
       print('❌ Error updating order status: $e');
+      return false;
+    }
+  }
+
+  /// Cancela un pedido con motivo opcional (visible para el admin)
+  Future<bool> cancelOrderWithReason(String orderId, String? reason) async {
+    try {
+      final now = DateTime.now().toIso8601String();
+      final data = <String, dynamic>{
+        'status': 'cancelled',
+        'updated_at': now,
+        'cancelled_at': now,
+      };
+      if (reason != null && reason.isNotEmpty) {
+        data['cancelled_reason'] = reason;
+      }
+
+      await _client.from('orders').update(data).eq('id', orderId);
+      return true;
+    } catch (e) {
+      print('❌ Error cancelling order with reason: $e');
       return false;
     }
   }
@@ -456,9 +576,22 @@ class AdminRepository {
 
   // ========== USERS MANAGEMENT ==========
 
-  /// Obtiene todos los usuarios
+  /// Obtiene todos los usuarios (usando RPC para bypasear RLS si existe, o query directa)
   Future<List<UserProfile>> getAllUsers() async {
     try {
+      // Intentar usar la función RPC que bypasa RLS
+      try {
+        final data = await _client.rpc('get_all_user_profiles');
+        if (data != null && data is List && data.isNotEmpty) {
+          return data
+              .map((e) => UserProfile.fromJson(e as Map<String, dynamic>))
+              .toList();
+        }
+      } catch (_) {
+        // Si la función RPC no existe, continuar con query directa
+      }
+      
+      // Fallback: query directa (depende de las políticas RLS)
       final data = await _client
           .from('user_profiles')
           .select()
@@ -605,7 +738,7 @@ class AdminRepository {
 
       final orders = await _client
           .from('orders')
-          .select('total_price, status, created_at')
+          .select('total_amount, status, created_at')
           .gte('created_at', start)
           .lte('created_at', end)
           .or('status.eq.paid,status.eq.completed');
@@ -615,16 +748,16 @@ class AdminRepository {
       Map<String, double> dailyRevenue = {};
 
       for (var order in orders as List) {
-        final totalPrice = order['total_price'] as num?;
+        final totalAmount = order['total_amount'] as num?;
         final createdAt = order['created_at'] as String?;
 
-        if (totalPrice != null) {
-          totalRevenue += totalPrice.toDouble();
+        if (totalAmount != null) {
+          totalRevenue += totalAmount.toDouble();
           totalOrders++;
 
           if (createdAt != null) {
             final date = DateTime.parse(createdAt).toIso8601String().split('T')[0];
-            dailyRevenue[date] = (dailyRevenue[date] ?? 0) + totalPrice.toDouble();
+            dailyRevenue[date] = (dailyRevenue[date] ?? 0) + totalAmount.toDouble();
           }
         }
       }

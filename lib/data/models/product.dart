@@ -7,6 +7,7 @@ class Product {
   final Map<String, dynamic>? detailedDescription;
   final int price;
   final int? comparePrice;
+  final int? costPrice;
   final int stock;
   final String? categoryId;
   final String? brand;
@@ -29,6 +30,7 @@ class Product {
     this.detailedDescription,
     required this.price,
     this.comparePrice,
+    this.costPrice,
     required this.stock,
     this.categoryId,
     this.brand,
@@ -53,6 +55,7 @@ class Product {
       detailedDescription: json['detailed_description'] as Map<String, dynamic>?,
       price: json['price'] as int,
       comparePrice: json['compare_price'] as int?,
+      costPrice: json['cost_price'] as int?,
       stock: json['stock'] as int? ?? 0,
       categoryId: json['category_id'] as String?,
       brand: json['brand'] as String?,
@@ -78,6 +81,7 @@ class Product {
       'detailed_description': detailedDescription,
       'price': price,
       'compare_price': comparePrice,
+      'cost_price': costPrice,
       'stock': stock,
       'category_id': categoryId,
       'brand': brand,

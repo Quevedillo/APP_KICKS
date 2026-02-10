@@ -27,63 +27,31 @@ class SizeRecommenderWidget extends StatefulWidget {
 
 class _SizeRecommenderWidgetState extends State<SizeRecommenderWidget> {
   final _formKey = GlobalKey<FormState>();
-  final _heightController = TextEditingController();
-  final _weightController = TextEditingController();
-  
+  final _footLengthController = TextEditingController();
+
   String? _recommendedSize;
   String? _sizeExplanation;
 
   @override
   void dispose() {
-    _heightController.dispose();
-    _weightController.dispose();
+    _footLengthController.dispose();
     super.dispose();
   }
 
-  /// Algoritmo de recomendación de talla
-  String _calculateSize(double height, double weight) {
-    // Regla 1: Peso > 90kg -> XL
-    if (weight > 90) {
-      _sizeExplanation = 'Con tu peso de ${weight.toInt()}kg, te recomendamos una talla XL para mayor comodidad.';
-      return 'XL';
-    }
-    
-    // Regla 2: Peso < 70kg Y altura < 175cm -> M
-    if (weight < 70 && height < 175) {
-      _sizeExplanation = 'Con ${height.toInt()}cm y ${weight.toInt()}kg, la talla M es perfecta para ti.';
-      return 'M';
-    }
-    
-    // Regla 3: Peso < 60kg -> S
-    if (weight < 60) {
-      _sizeExplanation = 'Con tu peso de ${weight.toInt()}kg, te recomendamos la talla S.';
-      return 'S';
-    }
-    
-    // Regla 4: Altura >= 180cm Y peso 70-90kg -> L
-    if (height >= 180 && weight >= 70 && weight <= 90) {
-      _sizeExplanation = 'Con ${height.toInt()}cm y ${weight.toInt()}kg, la talla L te quedará genial.';
-      return 'L';
-    }
-    
-    // Regla 5: Peso 70-90kg Y altura 175-180cm -> L
-    if (weight >= 70 && weight <= 90 && height >= 175) {
-      _sizeExplanation = 'Con ${height.toInt()}cm y ${weight.toInt()}kg, te recomendamos la talla L.';
-      return 'L';
-    }
-    
-    // Default -> M
-    _sizeExplanation = 'Basándonos en tus medidas (${height.toInt()}cm, ${weight.toInt()}kg), te recomendamos la talla M.';
-    return 'M';
+  /// Calcula la talla EU aproximada a partir de la longitud del pie en cm.
+  /// Fórmula aproximada: EU ≈ foot_cm * 1.5
+  String _calculateEUSize(double footCm) {
+    final eu = (footCm * 1.5).round();
+    final us = (eu - 33).round();
+    _sizeExplanation = 'Longitud del pie: ${footCm.toStringAsFixed(1)} cm → talla EU aprox. $eu (US ≈ $us).';
+    return eu.toString();
   }
 
   void _calculateRecommendation() {
     if (_formKey.currentState!.validate()) {
-      final height = double.tryParse(_heightController.text) ?? 0;
-      final weight = double.tryParse(_weightController.text) ?? 0;
-      
+      final foot = double.tryParse(_footLengthController.text) ?? 0;
       setState(() {
-        _recommendedSize = _calculateSize(height, weight);
+        _recommendedSize = _calculateEUSize(foot);
       });
     }
   }
@@ -142,21 +110,21 @@ class _SizeRecommenderWidgetState extends State<SizeRecommenderWidget> {
               
               const SizedBox(height: 8),
               Text(
-                'Introduce tu altura y peso para obtener una recomendación personalizada.',
+                'Introduce la longitud de tu pie en centímetros (ej. 26.0) para obtener la talla EU recomendada.',
                 style: TextStyle(color: Colors.grey[400], fontSize: 14),
               ),
               
               const SizedBox(height: 24),
               
-              // Height input
+              // Foot length input (shoe-specific)
               TextFormField(
-                controller: _heightController,
-                keyboardType: TextInputType.number,
+                controller: _footLengthController,
+                keyboardType: TextInputType.numberWithOptions(decimal: true),
                 style: const TextStyle(color: Colors.white),
                 decoration: InputDecoration(
-                  labelText: 'Altura (cm)',
+                  labelText: 'Longitud del pie (cm)',
                   labelStyle: TextStyle(color: Colors.grey[400]),
-                  prefixIcon: const Icon(Icons.height, color: Colors.amber),
+                  prefixIcon: const Icon(Icons.straighten, color: Colors.amber),
                   filled: true,
                   fillColor: Colors.grey[900],
                   border: OutlineInputBorder(
@@ -169,47 +137,9 @@ class _SizeRecommenderWidgetState extends State<SizeRecommenderWidget> {
                   ),
                 ),
                 validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Introduce tu altura';
-                  }
-                  final height = double.tryParse(value);
-                  if (height == null || height < 100 || height > 250) {
-                    return 'Altura inválida (100-250 cm)';
-                  }
-                  return null;
-                },
-              ),
-              
-              const SizedBox(height: 16),
-              
-              // Weight input
-              TextFormField(
-                controller: _weightController,
-                keyboardType: TextInputType.number,
-                style: const TextStyle(color: Colors.white),
-                decoration: InputDecoration(
-                  labelText: 'Peso (kg)',
-                  labelStyle: TextStyle(color: Colors.grey[400]),
-                  prefixIcon: const Icon(Icons.monitor_weight, color: Colors.amber),
-                  filled: true,
-                  fillColor: Colors.grey[900],
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Colors.amber),
-                  ),
-                ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Introduce tu peso';
-                  }
-                  final weight = double.tryParse(value);
-                  if (weight == null || weight < 30 || weight > 200) {
-                    return 'Peso inválido (30-200 kg)';
-                  }
+                  if (value == null || value.isEmpty) return 'Introduce la longitud del pie';
+                  final v = double.tryParse(value);
+                  if (v == null || v < 15 || v > 35) return 'Longitud inválida (15-35 cm)';
                   return null;
                 },
               ),
@@ -258,29 +188,18 @@ class _SizeRecommenderWidgetState extends State<SizeRecommenderWidget> {
                       ),
                       const SizedBox(height: 12),
                       Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 32,
-                          vertical: 16,
-                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                         decoration: BoxDecoration(
                           color: Colors.amber,
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
-                          _recommendedSize!,
-                          style: const TextStyle(
-                            fontSize: 36,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black,
-                          ),
+                          'EU ${_recommendedSize!}',
+                          style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.black),
                         ),
                       ),
                       const SizedBox(height: 12),
-                      Text(
-                        _sizeExplanation ?? '',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: Colors.grey[400], fontSize: 13),
-                      ),
+                      Text(_sizeExplanation ?? '', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey[400], fontSize: 13)),
                       const SizedBox(height: 16),
                       OutlinedButton(
                         onPressed: () => _selectSize(_recommendedSize!),

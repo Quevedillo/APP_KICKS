@@ -48,36 +48,42 @@ class OrderItem {
 class Order {
   final String id;
   final String? stripeSessionId;
+  final String? stripePaymentIntentId;
   final String userId;
   final int totalPrice;
+  final int? subtotalAmount;
+  final int? shippingAmount;
   final int? discountAmount;
-  final String? discountCode;
+  final String? discountCodeId;
   final String status;
   final String? returnStatus;
+  final String? cancelledReason;
   final List<OrderItem> items;
   final String? shippingName;
   final String? shippingEmail;
   final String? shippingPhone;
   final Map<String, dynamic>? shippingAddress;
-  final String? billingEmail;
   final DateTime createdAt;
   final DateTime? updatedAt;
 
   Order({
     required this.id,
     this.stripeSessionId,
+    this.stripePaymentIntentId,
     required this.userId,
     required this.totalPrice,
+    this.subtotalAmount,
+    this.shippingAmount,
     this.discountAmount,
-    this.discountCode,
+    this.discountCodeId,
     required this.status,
     this.returnStatus,
+    this.cancelledReason,
     required this.items,
     this.shippingName,
     this.shippingEmail,
     this.shippingPhone,
     this.shippingAddress,
-    this.billingEmail,
     required this.createdAt,
     this.updatedAt,
   });
@@ -117,18 +123,21 @@ class Order {
     return Order(
       id: json['id'] as String? ?? '',
       stripeSessionId: json['stripe_session_id'] as String?,
+      stripePaymentIntentId: json['stripe_payment_intent_id'] as String?,
       userId: json['user_id'] as String? ?? '',
-      totalPrice: _parseInt(json['total_price']),
+      totalPrice: _parseInt(json['total_amount'] ?? json['total_price']),
+      subtotalAmount: _parseInt(json['subtotal_amount']),
+      shippingAmount: _parseInt(json['shipping_amount']),
       discountAmount: _parseInt(json['discount_amount']),
-      discountCode: json['discount_code'] as String?,
+      discountCodeId: json['discount_code_id'] as String?,
       status: json['status'] as String? ?? 'pending',
       returnStatus: json['return_status'] as String?,
+      cancelledReason: json['cancelled_reason'] as String?,
       items: items,
       shippingName: json['shipping_name'] as String?,
       shippingEmail: json['shipping_email'] as String?,
       shippingPhone: json['shipping_phone'] as String?,
       shippingAddress: _parseShippingAddress(json['shipping_address']),
-      billingEmail: json['billing_email'] as String?,
       createdAt: json['created_at'] != null 
           ? DateTime.parse(json['created_at'] as String)
           : DateTime.now(),
@@ -202,7 +211,7 @@ class Order {
       'orderId': id,
       'date': createdAt.toIso8601String(),
       'customerName': shippingName ?? 'Cliente',
-      'customerEmail': shippingEmail ?? billingEmail ?? '',
+      'customerEmail': shippingEmail ?? '',
       'customerPhone': shippingPhone ?? '',
       'shippingAddress': shippingAddress != null
           ? [
@@ -222,7 +231,7 @@ class Order {
       }).toList(),
       'subtotal': totalPrice / 100,
       'discount': (discountAmount ?? 0) / 100,
-      'discountCode': discountCode,
+      'discountCode': discountCodeId ?? '',
       'total': totalPrice / 100,
       'status': statusLabel,
     };

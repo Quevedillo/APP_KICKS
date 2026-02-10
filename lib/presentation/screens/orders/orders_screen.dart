@@ -140,7 +140,7 @@ class OrdersScreen extends ConsumerWidget {
 
     return RefreshIndicator(
       onRefresh: () async {
-        ref.refresh(userOrdersProvider);
+        ref.invalidate(userOrdersProvider);
       },
       child: ListView.builder(
         padding: const EdgeInsets.all(16),
@@ -252,7 +252,7 @@ class _OrderCard extends StatelessWidget {
           ),
 
           // Shipping info
-          if (order.shippingName != null || order.billingEmail != null)
+          if (order.shippingName != null || order.shippingEmail != null)
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -282,7 +282,7 @@ class _OrderCard extends StatelessWidget {
                       ),
                     ],
                   ],
-                  if (order.billingEmail != null) ...[
+                  if (order.shippingEmail != null) ...[
                     if (order.shippingName != null) const SizedBox(height: 12),
                     const Text(
                       'EMAIL:',
@@ -290,7 +290,7 @@ class _OrderCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      order.billingEmail!,
+                      order.shippingEmail!,
                       style: const TextStyle(fontSize: 13),
                     ),
                   ],
@@ -312,12 +312,25 @@ class _OrderCard extends StatelessWidget {
                     // Download Invoice Button
                     Expanded(
                       child: OutlinedButton.icon(
-                        onPressed: () => _downloadInvoice(context),
-                        icon: const Icon(Icons.download, size: 18),
-                        label: const Text('Factura', style: TextStyle(fontSize: 12)),
+                        onPressed: () => _downloadInvoice(context, asPdf: true),
+                        icon: const Icon(Icons.picture_as_pdf, size: 18),
+                        label: const Text('PDF', style: TextStyle(fontSize: 12)),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: Colors.amber,
                           side: const BorderSide(color: Colors.amber),
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () => _downloadInvoice(context, asPdf: false),
+                        icon: const Icon(Icons.print, size: 18),
+                        label: const Text('Imprimir', style: TextStyle(fontSize: 12)),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.grey[300],
+                          side: BorderSide(color: Colors.grey[600]!),
                           padding: const EdgeInsets.symmetric(vertical: 10),
                         ),
                       ),
@@ -392,7 +405,7 @@ class _OrderCard extends StatelessWidget {
                           : 'Reembolso del pedido',
                       items: order.items.map((item) => {
                         'name': item.productName,
-                        'size': item.size ?? '-',
+                        'size': item.size,
                         'quantity': item.quantity,
                         'price': item.price,
                       }).toList(),
@@ -614,7 +627,7 @@ class _OrderCard extends StatelessWidget {
       if (success) {
         // Enviar email de confirmación
         await emailRepo.sendOrderStatusUpdate(
-          order.billingEmail ?? order.shippingEmail ?? '',
+          order.shippingEmail ?? '',
           order.displayId,
           'devolución solicitada',
           null,
@@ -645,7 +658,7 @@ class _OrderCard extends StatelessWidget {
     }
   }
 
-  Future<void> _downloadInvoice(BuildContext context) async {
+  Future<void> _downloadInvoice(BuildContext context, {bool asPdf = true}) async {
     try {
       final pdf = pw.Document();
       final invoiceData = order.toInvoiceData();
@@ -800,10 +813,22 @@ class _OrderCard extends StatelessWidget {
         ),
       );
 
-      await Printing.layoutPdf(
-        onLayout: (PdfPageFormat format) async => pdf.save(),
-        name: 'Factura_${invoiceData['invoiceNumber']}.pdf',
-      );
+      final pdfBytes = await pdf.save();
+      final fileName = 'Factura_${invoiceData['invoiceNumber']}.pdf';
+
+      if (asPdf) {
+        await Printing.sharePdf(bytes: pdfBytes, filename: fileName);
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('PDF generado'), backgroundColor: Colors.green),
+          );
+        }
+      } else {
+        await Printing.layoutPdf(
+          onLayout: (PdfPageFormat format) async => pdfBytes,
+          name: fileName,
+        );
+      }
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -817,14 +842,33 @@ class _OrderCard extends StatelessWidget {
   }
 
   void _showCancelDialog(BuildContext context) {
+    final reasonController = TextEditingController();
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: Colors.grey[900],
         title: const Text('Cancelar Pedido'),
-        content: Text(
-          '¿Estás seguro de que deseas cancelar el pedido #${order.displayId}?\n\n'
-          'El reembolso se procesará automáticamente.',
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '¿Estás seguro de que deseas cancelar el pedido #${order.displayId}?\n\n'
+              'El reembolso se procesará automáticamente.',
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: reasonController,
+              maxLines: 3,
+              decoration: InputDecoration(
+                labelText: 'Motivo (opcional)',
+                hintText: 'Ej: Ya no lo necesito, pedí la talla incorrecta...',
+                filled: true,
+                fillColor: Colors.grey[800],
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+            ),
+          ],
         ),
         actions: [
           TextButton(
@@ -834,7 +878,7 @@ class _OrderCard extends StatelessWidget {
           TextButton(
             onPressed: () async {
               Navigator.pop(ctx);
-              await _cancelOrder(context);
+              await _cancelOrder(context, reasonController.text.trim());
             },
             child: const Text('Sí, cancelar', style: TextStyle(color: Colors.red)),
           ),
@@ -843,17 +887,17 @@ class _OrderCard extends StatelessWidget {
     );
   }
 
-  Future<void> _cancelOrder(BuildContext context) async {
+  Future<void> _cancelOrder(BuildContext context, [String? reason]) async {
     try {
       final orderRepo = ref.read(orderRepositoryProvider);
       final emailRepo = ref.read(emailRepositoryProvider);
       
-      final success = await orderRepo.cancelOrder(order.id);
+      final success = await orderRepo.cancelOrder(order.id, reason: reason);
       
       if (success) {
         // Enviar email de cancelación
         await emailRepo.sendOrderStatusUpdate(
-          order.billingEmail ?? order.shippingEmail ?? '',
+          order.shippingEmail ?? '',
           order.displayId,
           'cancelado',
           null,

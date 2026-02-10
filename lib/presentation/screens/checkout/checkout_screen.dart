@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../logic/providers.dart';
 import '../../../data/services/stripe_service.dart';
-import '../../../data/repositories/discount_repository.dart';
 import '../../../data/models/discount_code.dart';
 
 class CheckoutScreen extends ConsumerStatefulWidget {
@@ -129,7 +128,6 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen>
 
     try {
       final cartItems = ref.read(cartProvider);
-      final cartTotal = ref.read(cartTotalProvider);
       final userEmail = ref.read(userEmailProvider);
       final finalAmount = _finalTotal;
 
@@ -179,7 +177,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen>
             cartItems: cartItems,
             totalPrice: finalAmount,
             discountAmount: _discountAmount > 0 ? _discountAmount : null,
-            discountCode: _appliedDiscount?.code,
+            discountCodeId: _appliedDiscount?.id,
             shippingEmail: userEmail,
           );
 

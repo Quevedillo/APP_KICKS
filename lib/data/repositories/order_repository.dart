@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/order.dart';
 import '../models/cart_item.dart';
@@ -14,7 +13,7 @@ class OrderRepository {
     required List<CartItem> cartItems,
     required int totalPrice,
     int? discountAmount,
-    String? discountCode,
+    String? discountCodeId,
     String? shippingName,
     String? shippingEmail,
     String? shippingPhone,
@@ -37,17 +36,17 @@ class OrderRepository {
 
       final orderData = {
         'user_id': userId,
-        'stripe_session_id': stripePaymentIntentId,
-        'total_price': totalPrice,
-        'discount_amount': discountAmount,
-        'discount_code': discountCode,
+        'stripe_payment_intent_id': stripePaymentIntentId,
+        'total_amount': totalPrice,
+        'subtotal_amount': totalPrice + (discountAmount ?? 0),
+        'discount_amount': discountAmount ?? 0,
+        'discount_code_id': discountCodeId,
         'status': 'paid',
-        'items': jsonEncode(itemsJson),
+        'items': itemsJson,
         'shipping_name': shippingName ?? _client.auth.currentUser?.email?.split('@').first,
         'shipping_email': shippingEmail ?? _client.auth.currentUser?.email,
         'shipping_phone': shippingPhone,
-        'shipping_address': shippingAddress != null ? jsonEncode(shippingAddress) : null,
-        'billing_email': _client.auth.currentUser?.email,
+        'shipping_address': shippingAddress,
         'created_at': DateTime.now().toIso8601String(),
       };
 
@@ -58,6 +57,20 @@ class OrderRepository {
           .single();
 
       print('✅ Pedido creado exitosamente: ${response['id']}');
+
+      // Reducir stock de las tallas compradas
+      for (final item in cartItems) {
+        try {
+          await _client.rpc('reduce_size_stock', params: {
+            'p_product_id': item.productId,
+            'p_size': item.size,
+            'p_quantity': item.quantity,
+          });
+        } catch (stockErr) {
+          print('⚠️ Error reduciendo stock para ${item.productId} talla ${item.size}: $stockErr');
+        }
+      }
+
       return Order.fromJson(response);
     } catch (e) {
       print('❌ Error creando pedido: $e');
@@ -104,16 +117,18 @@ class OrderRepository {
     return Order.fromJson(data);
   }
 
-  Future<bool> cancelOrder(String orderId) async {
+  Future<bool> cancelOrder(String orderId, {String? reason}) async {
     try {
       final userId = _client.auth.currentUser?.id;
       if (userId == null) return false;
+
+      final cancelReason = reason?.isNotEmpty == true ? reason! : 'Cancelado por el cliente';
 
       // Usar la función atómica de Supabase que restaura el stock
       final result = await _client.rpc('cancel_order_atomic', params: {
         'p_order_id': orderId,
         'p_user_id': userId,
-        'p_reason': 'Cancelado por el cliente',
+        'p_reason': cancelReason,
       });
 
       if (result != null && result['success'] == true) {
@@ -126,12 +141,13 @@ class OrderRepository {
       print('Error cancelling order: $e');
       // Fallback al método simple si la función no existe
       try {
+        final cancelReason = reason?.isNotEmpty == true ? reason! : 'Cancelado por el cliente';
         await _client
             .from('orders')
             .update({
               'status': 'cancelled',
               'cancelled_at': DateTime.now().toIso8601String(),
-              'cancelled_reason': 'Cancelado por el cliente',
+              'cancelled_reason': cancelReason,
               'updated_at': DateTime.now().toIso8601String(),
             })
             .eq('id', orderId);
@@ -149,7 +165,7 @@ class OrderRepository {
           .from('orders')
           .update({
             'return_status': 'requested',
-            'return_reason': reason,
+            'return_requested_at': DateTime.now().toIso8601String(),
             'updated_at': DateTime.now().toIso8601String(),
           })
           .eq('id', orderId);
