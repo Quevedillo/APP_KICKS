@@ -934,6 +934,56 @@ class _OrderDetailSheetState extends ConsumerState<_OrderDetailSheet> {
     );
   }
 
+  /// Helper method to build order info row widget
+  Widget _buildOrderInfoRow(IconData icon, String text, {bool copyable = false, bool small = false}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: Colors.grey[600]),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                fontSize: small ? 11 : 13,
+                color: small ? Colors.grey : Colors.white,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          if (copyable)
+            IconButton(
+              icon: const Icon(Icons.copy, size: 16, color: Colors.grey),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(maxWidth: 32, maxHeight: 32),
+              onPressed: () => Clipboard.setData(ClipboardData(text: text)),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// Helper method to build info row widget
+  Widget _buildInfoRow(IconData icon, String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: Colors.grey[600]),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(fontSize: 13, color: Colors.white),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final nextStatuses = _transitions[_order.status] ?? [];
@@ -1064,14 +1114,14 @@ class _OrderDetailSheetState extends ConsumerState<_OrderDetailSheet> {
 
                 // â”€â”€ Customer info â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                 _OrderSectionHeader('CLIENTE'),
-                _OrderInfoRow(Icons.person_outline, _order.shippingName ?? 'â€”'),
-                _OrderInfoRow(Icons.email_outlined,
+                _buildOrderInfoRow(Icons.person_outline, _order.shippingName ?? 'â€”'),
+                _buildOrderInfoRow(Icons.email_outlined,
                     _order.shippingEmail ?? 'â€”', copyable: true),
                 if (_order.shippingPhone != null)
-                  _OrderInfoRow(Icons.phone_outlined, _order.shippingPhone!),
+                  _buildOrderInfoRow(Icons.phone_outlined, _order.shippingPhone!),
                 if (addr != null) ...[
                   const SizedBox(height: 4),
-                  _InfoRow(
+                  _buildInfoRow(
                     Icons.location_on_outlined,
                     [
                       addr['address'],
@@ -1177,7 +1227,7 @@ class _OrderDetailSheetState extends ConsumerState<_OrderDetailSheet> {
                 // â”€â”€ Stripe info â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                 if (_order.stripePaymentIntentId != null) ...[
                   _OrderSectionHeader('PAGO'),
-                  _InfoRow(
+                  _buildOrderInfoRow(
                     Icons.credit_card,
                     _order.stripePaymentIntentId!,
                     copyable: true,
@@ -1317,44 +1367,7 @@ class _OrderSectionHeader extends StatelessWidget {
   }
 }
 
-class _OrderInfoRow_IGNORE_THIS {
-  final IconData icon;
-  final String text;
-  final bool copyable;
-  final bool small;
 
-  const _InfoRow(this.icon, this.text, {this.copyable = false, this.small = false});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: Row(
-        children: [
-          Icon(icon, size: 16, color: Colors.grey[600]),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              text,
-              style: TextStyle(
-                fontSize: small ? 11 : 13,
-                color: small ? Colors.grey : Colors.white,
-              ),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          if (copyable)
-            IconButton(
-              icon: const Icon(Icons.copy, size: 16, color: Colors.grey),
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(maxWidth: 32, maxHeight: 32),
-              onPressed: () => Clipboard.setData(ClipboardData(text: text)),
-            ),
-        ],
-      ),
-    );
-  }
-}
 
 class _OrderTotalRow extends StatelessWidget {
   final String label;
@@ -2176,563 +2189,6 @@ class _SettingItem extends StatelessWidget {
   }
 }
 
-class _OrderDetailSheet extends ConsumerWidget {
-  final Order order;
-
-  const _OrderDetailSheet({required this.order});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.85,
-      decoration: const BoxDecoration(
-        color: Color(0xFF121212),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('Detalle Pedido #${order.displayId}', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-              IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
-            ],
-          ),
-          const Divider(color: Colors.grey),
-          Expanded(
-            child: ListView(
-              children: [
-                _InfoRow(label: 'Estado', value: order.statusLabel, valueColor: _getStatusColor(order.status)),
-                _InfoRow(label: 'Fecha', value: DateFormat('dd MMM yyyy HH:mm').format(order.createdAt)),
-                _InfoRow(label: 'Cliente', value: order.shippingName ?? 'Desconocido'),
-                _InfoRow(label: 'Email', value: order.shippingEmail ?? 'N/A'),
-                _InfoRow(label: 'TelÃ©fono', value: order.shippingPhone ?? 'N/A'),
-                if (order.status == 'cancelled' && order.cancelledReason != null) ...[
-                  const SizedBox(height: 10),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.red.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.red.withOpacity(0.3)),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Icon(Icons.info_outline, color: Colors.red, size: 18),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text('Motivo de cancelaciÃ³n', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 12)),
-                              const SizedBox(height: 4),
-                              Text(order.cancelledReason!, style: TextStyle(color: Colors.grey[400], fontSize: 13)),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 20),
-                const Text('Productos', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                const SizedBox(height: 10),
-                ...order.items.map((item) => ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(item.productName, style: const TextStyle(fontSize: 14)),
-                  subtitle: Text('Talla: ${item.size} x ${item.quantity}'),
-                  trailing: Text('â‚¬${(item.price / 100).toStringAsFixed(2)}'),
-                )),
-                const Divider(color: Colors.grey),
-                _InfoRow(label: 'Subtotal', value: 'â‚¬${(order.totalPrice / 100).toStringAsFixed(2)}'),
-                _InfoRow(label: 'EnvÃ­o', value: 'â‚¬0.00'),
-                _InfoRow(label: 'Total', value: 'â‚¬${(order.totalPrice / 100).toStringAsFixed(2)}', isBold: true),
-                const SizedBox(height: 30),
-                const Text('DirecciÃ³n de EnvÃ­o', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                const SizedBox(height: 10),
-                Text(order.shippingAddress?.toString() ?? 'No especificada', style: TextStyle(color: Colors.grey[400])),
-                const SizedBox(height: 30),
-                // Descargar factura
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () => _downloadAdminInvoice(context, asPdf: true),
-                        icon: const Icon(Icons.picture_as_pdf, size: 18),
-                        label: const Text('Guardar PDF'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.amber,
-                          side: const BorderSide(color: Colors.amber),
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () => _downloadAdminInvoice(context, asPdf: false),
-                        icon: const Icon(Icons.print, size: 18),
-                        label: const Text('Imprimir'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.grey[300],
-                          side: BorderSide(color: Colors.grey[600]!),
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                // ===== CAMBIAR ESTADO =====
-                if (order.status != 'completed' && order.status != 'cancelled' && order.status != 'refunded') ...[
-                  const SizedBox(height: 8),
-                  const Text('Cambiar Estado', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                  const SizedBox(height: 10),
-                  _StatusChangeDropdown(
-                    currentStatus: order.status,
-                    onChanged: (newStatus) {
-                      if (newStatus == 'cancelled') {
-                        _showCancelWithReasonDialog(context, ref);
-                      } else {
-                        _updateStatus(context, ref, newStatus);
-                      }
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                ],
-
-                // ===== SOLICITUD DE REEMBOLSO =====
-                if (order.returnStatus == 'requested') ...[
-                  const SizedBox(height: 16),
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.orange.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.orange.withOpacity(0.5)),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            const Icon(Icons.warning_amber, color: Colors.orange, size: 22),
-                            const SizedBox(width: 8),
-                            const Text(
-                              'Solicitud de Reembolso Pendiente',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.orange,
-                                fontSize: 15,
-                              ),
-                            ),
-                          ],
-                        ),
-                        if (order.cancelledReason != null && order.cancelledReason!.isNotEmpty) ...[
-                          const SizedBox(height: 12),
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Colors.black26,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text('Motivo del cliente:', style: TextStyle(color: Colors.grey, fontSize: 12)),
-                                const SizedBox(height: 4),
-                                Text(order.cancelledReason!, style: const TextStyle(fontSize: 14)),
-                              ],
-                            ),
-                          ),
-                        ],
-                        const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: ElevatedButton.icon(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.green,
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(vertical: 14),
-                                ),
-                                onPressed: () => _approveRefund(context, ref),
-                                icon: const Icon(Icons.check_circle, size: 18),
-                                label: const Text('Aprobar Reembolso'),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: ElevatedButton.icon(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.red,
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(vertical: 14),
-                                ),
-                                onPressed: () => _rejectRefund(context, ref),
-                                icon: const Icon(Icons.cancel, size: 18),
-                                label: const Text('Rechazar'),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _approveRefund(BuildContext context, WidgetRef ref) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: Colors.grey[900],
-        title: const Text('Aprobar Reembolso'),
-        content: Text(
-          'Â¿Aprobar el reembolso de â‚¬${(order.totalPrice / 100).toStringAsFixed(2)} '
-          'para el pedido #${order.displayId}?\n\n'
-          'Se procesarÃ¡ el reembolso en Stripe y se enviarÃ¡ la factura de cancelaciÃ³n al cliente.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('No'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('SÃ­, aprobar', style: TextStyle(color: Colors.green)),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed != true) return;
-
-    final success = await ref.read(adminRepositoryProvider).approveRefundRequest(order.id);
-    if (success) {
-      // Enviar email con factura de cancelaciÃ³n
-      final emailRepo = ref.read(emailRepositoryProvider);
-      await emailRepo.sendCancellationInvoice(
-        order.shippingEmail ?? '',
-        order.displayId,
-        order.totalPrice / 100,
-        order.shippingName ?? 'Cliente',
-        order.items.map((item) => {
-          'name': item.productName,
-          'size': item.size,
-          'quantity': item.quantity,
-          'price': item.price / 100,
-        }).toList(),
-        reason: order.cancelledReason,
-      );
-    }
-
-    if (context.mounted) {
-      Navigator.pop(context);
-      ref.invalidate(adminAllOrdersProvider);
-      ref.invalidate(adminReturnRequestsProvider);
-      ref.invalidate(adminDashboardStatsProvider);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(success
-              ? 'Reembolso aprobado y procesado. Factura enviada al cliente.'
-              : 'Error al procesar el reembolso'),
-          backgroundColor: success ? Colors.green : Colors.red,
-        ),
-      );
-    }
-  }
-
-  Future<void> _rejectRefund(BuildContext context, WidgetRef ref) async {
-    final reasonController = TextEditingController();
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: Colors.grey[900],
-        title: const Text('Rechazar Reembolso'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('Â¿Rechazar la solicitud de reembolso del pedido #${order.displayId}?'),
-            const SizedBox(height: 16),
-            TextField(
-              controller: reasonController,
-              maxLines: 3,
-              decoration: InputDecoration(
-                labelText: 'Motivo del rechazo (opcional)',
-                filled: true,
-                fillColor: Colors.grey[800],
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Rechazar', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed != true) return;
-
-    final success = await ref.read(adminRepositoryProvider).rejectRefundRequest(
-      order.id,
-      reason: reasonController.text.trim().isEmpty ? null : reasonController.text.trim(),
-    );
-    if (context.mounted) {
-      Navigator.pop(context);
-      ref.invalidate(adminAllOrdersProvider);
-      ref.invalidate(adminReturnRequestsProvider);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(success ? 'Solicitud de reembolso rechazada' : 'Error al rechazar'),
-          backgroundColor: success ? Colors.orange : Colors.red,
-        ),
-      );
-    }
-  }
-
-  void _showCancelWithReasonDialog(BuildContext context, WidgetRef ref) {
-    final reasonController = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: Colors.grey[900],
-        title: const Text('Cancelar Pedido'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Â¿Cancelar el pedido #${order.displayId}?'),
-            const SizedBox(height: 16),
-            TextField(
-              controller: reasonController,
-              maxLines: 3,
-              decoration: InputDecoration(
-                labelText: 'Motivo (opcional)',
-                hintText: 'Ej: Sin stock, solicitud del cliente...',
-                filled: true,
-                fillColor: Colors.grey[800],
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('No, mantener'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              _cancelWithReason(context, ref, reasonController.text.trim());
-            },
-            child: const Text('SÃ­, cancelar', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _cancelWithReason(BuildContext context, WidgetRef ref, String reason) async {
-    final success = await ref.read(adminRepositoryProvider).cancelOrderWithReason(
-      order.id, 
-      reason.isEmpty ? null : reason,
-    );
-    if (success && context.mounted) {
-      Navigator.pop(context);
-      ref.invalidate(adminAllOrdersProvider);
-      ref.invalidate(adminDashboardStatsProvider);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pedido cancelado')));
-    }
-  }
-
-  Future<void> _downloadAdminInvoice(BuildContext context, {bool asPdf = true}) async {
-    try {
-      final pdf = pw.Document();
-      final invoiceData = order.toInvoiceData();
-      final currencyFormat = NumberFormat.currency(locale: 'es_ES', symbol: 'â‚¬');
-
-      pdf.addPage(
-        pw.Page(
-          pageFormat: PdfPageFormat.a4,
-          build: (pw.Context ctx) {
-            return pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
-              children: [
-                pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                  children: [
-                    pw.Column(
-                      crossAxisAlignment: pw.CrossAxisAlignment.start,
-                      children: [
-                        pw.Text('KICKSPREMIUM', style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold)),
-                        pw.Text('Factura de Compra', style: const pw.TextStyle(color: PdfColors.grey)),
-                      ],
-                    ),
-                    pw.Column(
-                      crossAxisAlignment: pw.CrossAxisAlignment.end,
-                      children: [
-                        pw.Text('Factura: ${invoiceData['invoiceNumber']}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                        pw.Text('Fecha: ${DateFormat('dd/MM/yyyy').format(order.createdAt)}'),
-                        pw.Text('Estado: ${order.statusLabel}'),
-                      ],
-                    ),
-                  ],
-                ),
-                pw.SizedBox(height: 30),
-                pw.Container(
-                  padding: const pw.EdgeInsets.all(15),
-                  decoration: pw.BoxDecoration(
-                    color: PdfColors.grey100,
-                    borderRadius: pw.BorderRadius.circular(8),
-                  ),
-                  child: pw.Column(
-                    crossAxisAlignment: pw.CrossAxisAlignment.start,
-                    children: [
-                      pw.Text('Datos del Cliente', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                      pw.SizedBox(height: 8),
-                      pw.Text('Nombre: ${invoiceData['customerName']}'),
-                      pw.Text('Email: ${invoiceData['customerEmail']}'),
-                      if ((invoiceData['customerPhone'] as String).isNotEmpty)
-                        pw.Text('TelÃ©fono: ${invoiceData['customerPhone']}'),
-                      if ((invoiceData['shippingAddress'] as String).isNotEmpty)
-                        pw.Text('DirecciÃ³n: ${invoiceData['shippingAddress']}'),
-                    ],
-                  ),
-                ),
-                pw.SizedBox(height: 20),
-                pw.Container(
-                  padding: const pw.EdgeInsets.symmetric(vertical: 10, horizontal: 10),
-                  color: PdfColors.amber,
-                  child: pw.Row(
-                    children: [
-                      pw.Expanded(flex: 3, child: pw.Text('Producto', style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
-                      pw.Expanded(child: pw.Text('Talla', style: pw.TextStyle(fontWeight: pw.FontWeight.bold), textAlign: pw.TextAlign.center)),
-                      pw.Expanded(child: pw.Text('Cant.', style: pw.TextStyle(fontWeight: pw.FontWeight.bold), textAlign: pw.TextAlign.center)),
-                      pw.Expanded(child: pw.Text('Precio', style: pw.TextStyle(fontWeight: pw.FontWeight.bold), textAlign: pw.TextAlign.right)),
-                      pw.Expanded(child: pw.Text('Total', style: pw.TextStyle(fontWeight: pw.FontWeight.bold), textAlign: pw.TextAlign.right)),
-                    ],
-                  ),
-                ),
-                ...((invoiceData['items'] as List).map((item) => pw.Container(
-                  padding: const pw.EdgeInsets.symmetric(vertical: 8, horizontal: 10),
-                  decoration: const pw.BoxDecoration(
-                    border: pw.Border(bottom: pw.BorderSide(color: PdfColors.grey300)),
-                  ),
-                  child: pw.Row(
-                    children: [
-                      pw.Expanded(flex: 3, child: pw.Text(item['name'].toString(), style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
-                      pw.Expanded(child: pw.Text(item['size'].toString(), textAlign: pw.TextAlign.center)),
-                      pw.Expanded(child: pw.Text('${item['quantity']}', textAlign: pw.TextAlign.center)),
-                      pw.Expanded(child: pw.Text(currencyFormat.format(item['unitPrice']), textAlign: pw.TextAlign.right)),
-                      pw.Expanded(child: pw.Text(currencyFormat.format(item['total']), textAlign: pw.TextAlign.right)),
-                    ],
-                  ),
-                ))),
-                pw.SizedBox(height: 20),
-                pw.Container(
-                  alignment: pw.Alignment.centerRight,
-                  child: pw.Column(
-                    crossAxisAlignment: pw.CrossAxisAlignment.end,
-                    children: [
-                      if ((invoiceData['discount'] as double) > 0) ...[
-                        pw.Text('Subtotal: ${currencyFormat.format(invoiceData['subtotal'] + invoiceData['discount'])}'),
-                        pw.Text('Descuento (${invoiceData['discountCode']}): -${currencyFormat.format(invoiceData['discount'])}',
-                          style: const pw.TextStyle(color: PdfColors.green)),
-                      ],
-                      pw.SizedBox(height: 8),
-                      pw.Text('TOTAL: ${currencyFormat.format(invoiceData['total'])}',
-                        style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
-                    ],
-                  ),
-                ),
-                pw.SizedBox(height: 40),
-                pw.Container(
-                  padding: const pw.EdgeInsets.all(15),
-                  decoration: pw.BoxDecoration(
-                    border: pw.Border.all(color: PdfColors.grey300),
-                    borderRadius: pw.BorderRadius.circular(8),
-                  ),
-                  child: pw.Column(
-                    children: [
-                      pw.Text('Â¡Gracias por tu compra!', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                      pw.SizedBox(height: 5),
-                      pw.Text('Si tienes alguna pregunta, contÃ¡ctanos en support@kickspremium.com',
-                        style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey)),
-                    ],
-                  ),
-                ),
-              ],
-            );
-          },
-        ),
-      );
-
-      final pdfBytes = await pdf.save();
-      final fileName = 'Factura_${invoiceData['invoiceNumber']}.pdf';
-
-      if (asPdf) {
-        // Save PDF to device and share
-        await Printing.sharePdf(bytes: pdfBytes, filename: fileName);
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('PDF generado'), backgroundColor: Colors.green),
-          );
-        }
-      } else {
-        // Print
-        await Printing.layoutPdf(
-          onLayout: (PdfPageFormat format) async => pdfBytes,
-          name: fileName,
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error generando factura: $e'), backgroundColor: Colors.red),
-        );
-      }
-    }
-  }
-
-  Future<void> _updateStatus(BuildContext context, WidgetRef ref, String status) async {
-    final success = await ref.read(adminRepositoryProvider).updateOrderStatus(order.id, status);
-    if (success && context.mounted) {
-      Navigator.pop(context);
-      ref.invalidate(adminAllOrdersProvider);
-      ref.invalidate(adminDashboardStatsProvider);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Pedido $status')));
-    }
-  }
-
-  Color _getStatusColor(String status) {
-    switch (status) {
-      case 'completed': return Colors.green;
-      case 'pending': return Colors.orange;
-      case 'cancelled': return Colors.red;
-      default: return Colors.blue;
-    }
-  }
-}
-
 class _StatusChangeDropdown extends StatelessWidget {
   final String currentStatus;
   final ValueChanged<String> onChanged;
@@ -2863,11 +2319,11 @@ class _ProductDetailSheet extends ConsumerWidget {
                     child: Image.network(product.images.first, height: 200, fit: BoxFit.cover),
                   ),
                 const SizedBox(height: 20),
-                _InfoRow(label: 'Nombre', value: product.name),
-                _InfoRow(label: 'Precio (â‚¬)', value: (product.price / 100).toStringAsFixed(2)),
-                _InfoRow(label: 'Stock', value: product.stock.toString()),
-                _InfoRow(label: 'Marca', value: product.brand ?? 'N/A'),
-                _InfoRow(label: 'SKU', value: product.sku ?? 'N/A'),
+                _ProductInfoRow(label: 'Nombre', value: product.name),
+                _ProductInfoRow(label: 'Precio (€)', value: (product.price / 100).toStringAsFixed(2)),
+                _ProductInfoRow(label: 'Stock', value: product.stock.toString()),
+                _ProductInfoRow(label: 'Marca', value: product.brand ?? 'N/A'),
+                _ProductInfoRow(label: 'SKU', value: product.sku ?? 'N/A'),
                 const SizedBox(height: 20),
                 const Text('Tallas Disponibles', style: TextStyle(fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
@@ -2916,7 +2372,78 @@ class _ProductDetailSheet extends ConsumerWidget {
       ),
     );
   }
+}
 
+class _ProductInfoRow extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color? valueColor;
+  final bool isBold;
+
+  const _ProductInfoRow({
+    required this.label,
+    required this.value,
+    this.valueColor,
+    this.isBold = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: TextStyle(color: Colors.grey[400], fontSize: 13)),
+          Text(
+            value,
+            style: TextStyle(
+              color: valueColor ?? Colors.white,
+              fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+              fontSize: 13,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ConfirmDeleteDialog extends StatelessWidget {
+  final String title;
+  final String message;
+  final VoidCallback onConfirm;
+
+  const _ConfirmDeleteDialog({
+    required this.title,
+    required this.message,
+    required this.onConfirm,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: Colors.grey[900],
+      title: Text(title),
+      content: Text(message),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('CANCELAR'),
+        ),
+        TextButton(
+          onPressed: () {
+            Navigator.pop(context);
+            onConfirm();
+          },
+          child: const Text('ELIMINAR', style: TextStyle(color: Colors.red)),
+        ),
+      ],
+    );
+  }
+}
+
+extension _ProductDetailSheetExtension on _ProductDetailSheet {
   void _confirmDeleteProduct(BuildContext context, WidgetRef ref, Product product) {
     showDialog(
       context: context,
@@ -2944,32 +2471,7 @@ class _ProductDetailSheet extends ConsumerWidget {
   }
 }
 
-class _OrderInfoRow_IGNORE_THIS {
-  final String label;
-  final String value;
-  final Color? valueColor;
-  final bool isBold;
 
-  const _InfoRow({required this.label, required this.value, this.valueColor, this.isBold = false});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: TextStyle(color: Colors.grey[400], fontSize: 13)),
-          Text(value, style: TextStyle(
-            color: valueColor ?? Colors.white,
-            fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-            fontSize: 13,
-          )),
-        ],
-      ),
-    );
-  }
-}
 
 // ========== FORM FUNCTIONS ==========
 
