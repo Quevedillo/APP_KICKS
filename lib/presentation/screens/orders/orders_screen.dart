@@ -350,13 +350,13 @@ class _OrderCard extends StatelessWidget {
                           ),
                         ),
                       )
-                    // Return Request Button (only if delivered)
-                    else if (order.canReturn)
+                    // Refund Request Button (only if shipped/delivered)
+                    else if (order.canRequestRefund)
                       Expanded(
                         child: OutlinedButton.icon(
                           onPressed: () => _showReturnDialog(context),
                           icon: const Icon(Icons.assignment_return, size: 18),
-                          label: const Text('Devolver', style: TextStyle(fontSize: 12)),
+                          label: const Text('Reembolso', style: TextStyle(fontSize: 12)),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: Colors.orange,
                             side: const BorderSide(color: Colors.orange),
@@ -421,207 +421,159 @@ class _OrderCard extends StatelessWidget {
   }
 
   void _showReturnDialog(BuildContext context) {
+    final reasonController = TextEditingController();
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        decoration: BoxDecoration(
-          color: Colors.grey[900],
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(Icons.assignment_return, color: Colors.orange, size: 28),
-                ),
-                const SizedBox(width: 16),
-                const Expanded(
-                  child: Text(
-                    'Solicitar Devolución',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => Navigator.pop(context),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-
-            // Shipping Instructions
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.amber.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.amber.withOpacity(0.5)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.grey[900],
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header
+              Row(
                 children: [
-                  Row(
-                    children: [
-                      Icon(Icons.local_shipping, color: Colors.amber[700], size: 20),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Instrucciones de Envío',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.amber[700],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'Debes enviar los artículos en su embalaje original a:',
-                    style: TextStyle(color: Colors.grey),
-                  ),
-                  const SizedBox(height: 8),
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.black26,
-                      borderRadius: BorderRadius.circular(8),
+                      color: Colors.orange.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'KICKSPREMIUM - Devoluciones',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        Text('Calle de la Moda 123'),
-                        Text('Polígono Industrial La Zapatilla'),
-                        Text('28000 Madrid, España'),
-                      ],
-                    ),
+                    child: const Icon(Icons.assignment_return, color: Colors.orange, size: 28),
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Email Confirmation
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.blue.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.blue.withOpacity(0.5)),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.email, color: Colors.blue),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 16),
                   const Expanded(
                     child: Text(
-                      'Recibirás un correo con la etiqueta de devolución y los siguientes pasos.',
-                      style: TextStyle(fontSize: 13),
+                      'Solicitar Reembolso',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(ctx),
+                  ),
                 ],
               ),
-            ),
-            const SizedBox(height: 16),
+              const SizedBox(height: 24),
 
-            // Refund Information
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.green.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.green.withOpacity(0.5)),
+              // Reason field (required)
+              TextField(
+                controller: reasonController,
+                maxLines: 3,
+                decoration: InputDecoration(
+                  labelText: 'Motivo del reembolso *',
+                  hintText: 'Ej: Producto defectuoso, no coincide con la descripción...',
+                  filled: true,
+                  fillColor: Colors.grey[800],
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                ),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.info_outline, color: Colors.green),
-                      const SizedBox(width: 8),
-                      const Text(
-                        'Información de Reembolso',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.green,
+              const SizedBox(height: 16),
+
+              // Info
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.amber.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.amber.withOpacity(0.5)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.info_outline, color: Colors.amber[700], size: 20),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Información importante',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.amber[700],
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Una vez recibido y validado el paquete, el reembolso se procesará en tu método de pago original en un plazo de 5 a 7 días hábiles.',
-                    style: TextStyle(fontSize: 13, color: Colors.grey),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // Submit Button
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () async {
-                  Navigator.pop(context);
-                  await _requestReturn(context);
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.orange,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: const Text(
-                  'SOLICITAR DEVOLUCIÓN',
-                  style: TextStyle(fontWeight: FontWeight.bold),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Tu solicitud de reembolso quedará pendiente hasta que un administrador la revise y apruebe. '
+                      'Una vez aprobada, el reembolso se procesará automáticamente en tu método de pago original.',
+                      style: TextStyle(fontSize: 13, color: Colors.grey),
+                    ),
+                  ],
                 ),
               ),
-            ),
-            const SizedBox(height: 12),
+              const SizedBox(height: 24),
 
-            // Cancel Button
-            SizedBox(
-              width: double.infinity,
-              child: TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancelar'),
+              // Submit Button
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () async {
+                    final reason = reasonController.text.trim();
+                    if (reason.isEmpty) {
+                      ScaffoldMessenger.of(ctx).showSnackBar(
+                        const SnackBar(
+                          content: Text('Debes indicar un motivo para el reembolso'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                      return;
+                    }
+                    Navigator.pop(ctx);
+                    await _requestReturn(context, reason);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.orange,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text(
+                    'SOLICITAR REEMBOLSO',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-          ],
+              const SizedBox(height: 12),
+
+              // Cancel Button
+              SizedBox(
+                width: double.infinity,
+                child: TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('Cancelar'),
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Future<void> _requestReturn(BuildContext context) async {
+  Future<void> _requestReturn(BuildContext context, String reason) async {
     try {
       final orderRepo = ref.read(orderRepositoryProvider);
       final emailRepo = ref.read(emailRepositoryProvider);
       
       final success = await orderRepo.requestReturn(
         order.id,
-        'Solicitud de devolución del cliente',
+        reason,
       );
       
       if (success) {
@@ -629,7 +581,7 @@ class _OrderCard extends StatelessWidget {
         await emailRepo.sendOrderStatusUpdate(
           order.shippingEmail ?? '',
           order.displayId,
-          'devolución solicitada',
+          'reembolso solicitado',
           null,
         );
 
@@ -638,7 +590,7 @@ class _OrderCard extends StatelessWidget {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Solicitud de devolución enviada. Revisa tu email.'),
+              content: Text('Solicitud de reembolso enviada. Quedará pendiente de aprobación.'),
               backgroundColor: Colors.green,
             ),
           );
@@ -895,12 +847,19 @@ class _OrderCard extends StatelessWidget {
       final success = await orderRepo.cancelOrder(order.id, reason: reason);
       
       if (success) {
-        // Enviar email de cancelación
-        await emailRepo.sendOrderStatusUpdate(
+        // Enviar email con factura de cancelación/reembolso
+        await emailRepo.sendCancellationInvoice(
           order.shippingEmail ?? '',
           order.displayId,
-          'cancelado',
-          null,
+          order.totalPrice / 100,
+          order.shippingName ?? 'Cliente',
+          order.items.map((item) => {
+            'name': item.productName,
+            'size': item.size,
+            'quantity': item.quantity,
+            'price': item.price / 100,
+          }).toList(),
+          reason: reason,
         );
 
         ref.invalidate(userOrdersProvider);
@@ -908,7 +867,7 @@ class _OrderCard extends StatelessWidget {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Pedido cancelado. Recibirás un email de confirmación.'),
+              content: Text('Pedido cancelado y reembolsado. Recibirás la factura por email.'),
               backgroundColor: Colors.green,
             ),
           );

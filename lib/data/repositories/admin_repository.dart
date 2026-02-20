@@ -5,6 +5,7 @@ import '../models/product.dart';
 import '../models/user_profile.dart';
 import '../models/category.dart';
 import '../models/discount_code.dart';
+import '../services/stripe_service.dart';
 
 /// Repositorio centralizado para todas las operaciones de administración
 /// Sincroniza datos con Supabase y Stripe
@@ -438,6 +439,66 @@ class AdminRepository {
     } catch (e) {
       print('❌ Error fetching return requests: $e');
       rethrow;
+    }
+  }
+
+  /// Aprueba una solicitud de reembolso: procesa el reembolso en Stripe y actualiza el estado
+  Future<bool> approveRefundRequest(String orderId) async {
+    try {
+      final now = DateTime.now().toIso8601String();
+
+      // Obtener datos de la orden para el reembolso
+      final orderData = await _client
+          .from('orders')
+          .select('stripe_payment_intent_id, status, total_amount')
+          .eq('id', orderId)
+          .maybeSingle();
+
+      if (orderData == null) return false;
+
+      // Procesar reembolso en Stripe
+      final paymentIntentId = orderData['stripe_payment_intent_id'] as String?;
+      if (paymentIntentId != null && paymentIntentId.isNotEmpty) {
+        try {
+          await StripeService.refundPayment(paymentIntentId: paymentIntentId);
+        } catch (refundErr) {
+          print('⚠️ Error procesando reembolso Stripe: $refundErr');
+          // Continuar aunque falle Stripe - se puede reintentar manualmente
+        }
+      }
+
+      // Actualizar el estado de la orden
+      await _client.from('orders').update({
+        'status': 'refunded',
+        'return_status': 'refunded',
+        'cancelled_at': now,
+        'updated_at': now,
+      }).eq('id', orderId);
+
+      return true;
+    } catch (e) {
+      print('❌ Error approving refund request: $e');
+      return false;
+    }
+  }
+
+  /// Rechaza una solicitud de reembolso
+  Future<bool> rejectRefundRequest(String orderId, {String? reason}) async {
+    try {
+      final now = DateTime.now().toIso8601String();
+      final data = <String, dynamic>{
+        'return_status': 'rejected',
+        'updated_at': now,
+      };
+      if (reason != null && reason.isNotEmpty) {
+        data['cancelled_reason'] = reason;
+      }
+
+      await _client.from('orders').update(data).eq('id', orderId);
+      return true;
+    } catch (e) {
+      print('❌ Error rejecting refund request: $e');
+      return false;
     }
   }
 

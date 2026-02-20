@@ -22,7 +22,7 @@ class Category {
       slug: json['slug'] as String,
       description: json['description'] as String?,
       icon: json['icon'] as String?,
-      displayOrder: json['display_order'] as int? ?? 0,
+      displayOrder: ((json['display_order'] as num?) ?? 0).toInt(),
     );
   }
 }

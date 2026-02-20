@@ -31,11 +31,11 @@ class DiscountCode {
       code: json['code'] as String,
       description: json['description'] as String?,
       discountType: json['discount_type'] as String,
-      discountValue: json['discount_value'] as int,
-      minPurchase: json['min_purchase'] as int? ?? 0,
-      maxUses: json['max_uses'] as int?,
-      maxUsesPerUser: json['max_uses_per_user'] as int? ?? 1,
-      currentUses: json['current_uses'] as int? ?? 0,
+      discountValue: (json['discount_value'] as num).toInt(),
+      minPurchase: ((json['min_purchase'] as num?) ?? 0).toInt(),
+      maxUses: (json['max_uses'] as num?)?.toInt(),
+      maxUsesPerUser: ((json['max_uses_per_user'] as num?) ?? 1).toInt(),
+      currentUses: ((json['current_uses'] as num?) ?? 0).toInt(),
       isActive: json['is_active'] as bool? ?? true,
       expiresAt: json['expires_at'] != null 
           ? DateTime.parse(json['expires_at'] as String) 

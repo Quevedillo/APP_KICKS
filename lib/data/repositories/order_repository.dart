@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/order.dart';
 import '../models/cart_item.dart';
+import '../services/stripe_service.dart';
 
 class OrderRepository {
   final SupabaseClient _client;
@@ -124,24 +125,45 @@ class OrderRepository {
 
       final cancelReason = reason?.isNotEmpty == true ? reason! : 'Cancelado por el cliente';
 
-      // Usar la función atómica de Supabase que restaura el stock
-      final result = await _client.rpc('cancel_order_atomic', params: {
-        'p_order_id': orderId,
-        'p_user_id': userId,
-        'p_reason': cancelReason,
-      });
+      // Obtener la orden para conseguir el paymentIntentId
+      final orderData = await _client
+          .from('orders')
+          .select('stripe_payment_intent_id, status')
+          .eq('id', orderId)
+          .maybeSingle();
 
-      if (result != null && result['success'] == true) {
-        return true;
-      } else {
-        print('Error cancelling order: ${result?['error']}');
-        return false;
-      }
-    } catch (e) {
-      print('Error cancelling order: $e');
-      // Fallback al método simple si la función no existe
+      // Usar la función atómica de Supabase que restaura el stock
       try {
-        final cancelReason = reason?.isNotEmpty == true ? reason! : 'Cancelado por el cliente';
+        final result = await _client.rpc('cancel_order_atomic', params: {
+          'p_order_id': orderId,
+          'p_user_id': userId,
+          'p_reason': cancelReason,
+        });
+
+        if (result != null && result['success'] == true) {
+          // Procesar reembolso en Stripe si hay payment intent
+          if (orderData != null && orderData['stripe_payment_intent_id'] != null) {
+            try {
+              await StripeService.refundPayment(
+                paymentIntentId: orderData['stripe_payment_intent_id'],
+              );
+              // Actualizar estado a refunded
+              await _client.from('orders').update({
+                'status': 'refunded',
+                'updated_at': DateTime.now().toIso8601String(),
+              }).eq('id', orderId);
+            } catch (refundErr) {
+              print('⚠️ Error procesando reembolso Stripe: $refundErr');
+              // La orden ya está cancelada, el reembolso se hará manual
+            }
+          }
+          return true;
+        } else {
+          print('Error cancelling order: ${result?['error']}');
+          return false;
+        }
+      } catch (e) {
+        // Fallback al método simple si la función no existe
         await _client
             .from('orders')
             .update({
@@ -151,11 +173,26 @@ class OrderRepository {
               'updated_at': DateTime.now().toIso8601String(),
             })
             .eq('id', orderId);
+
+        // Procesar reembolso en Stripe
+        if (orderData != null && orderData['stripe_payment_intent_id'] != null) {
+          try {
+            await StripeService.refundPayment(
+              paymentIntentId: orderData['stripe_payment_intent_id'],
+            );
+            await _client.from('orders').update({
+              'status': 'refunded',
+              'updated_at': DateTime.now().toIso8601String(),
+            }).eq('id', orderId);
+          } catch (refundErr) {
+            print('⚠️ Error procesando reembolso Stripe: $refundErr');
+          }
+        }
         return true;
-      } catch (e2) {
-        print('Fallback cancel also failed: $e2');
-        return false;
       }
+    } catch (e) {
+      print('Error cancelling order: $e');
+      return false;
     }
   }
 
@@ -165,6 +202,7 @@ class OrderRepository {
           .from('orders')
           .update({
             'return_status': 'requested',
+            'cancelled_reason': reason,
             'return_requested_at': DateTime.now().toIso8601String(),
             'updated_at': DateTime.now().toIso8601String(),
           })

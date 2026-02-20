@@ -21,14 +21,27 @@ class OrderItem {
 
   factory OrderItem.fromJson(Map<String, dynamic> json) {
     final product = json['product'] as Map<String, dynamic>?;
+    final priceValue = json['price'] ?? product?['price'] ?? 0;
+    final quantityValue = json['quantity'] ?? json['qty'] ?? 1;
+    
+    // Helper para convertir a int de forma segura
+    int _safeInt(dynamic value) {
+      if (value == null) return 0;
+      if (value is int) return value;
+      if (value is double) return value.toInt();
+      if (value is String) return int.tryParse(value) ?? 0;
+      if (value is num) return value.toInt();
+      return 0;
+    }
+    
     return OrderItem(
       productId: json['product_id'] ?? product?['id'] ?? '',
       productName: product?['name'] ?? json['name'] ?? '',
       productBrand: product?['brand'] ?? json['brand'] ?? '',
       productImage: (product?['images'] as List?)?.first ?? json['image'] ?? '',
-      price: json['price'] ?? product?['price'] ?? 0,
+      price: _safeInt(priceValue),
       size: json['size'] ?? '',
-      quantity: json['quantity'] ?? json['qty'] ?? 1,
+      quantity: _safeInt(quantityValue),
     );
   }
 
@@ -201,8 +214,8 @@ class Order {
     }
   }
 
-  bool get canCancel => ['pending', 'paid', 'processing'].contains(status);
-  bool get canReturn => status == 'delivered' && returnStatus == null;
+  bool get canCancel => ['paid', 'processing'].contains(status);
+  bool get canRequestRefund => ['shipped', 'delivered'].contains(status) && returnStatus == null;
 
   /// Generar datos para factura PDF
   Map<String, dynamic> toInvoiceData() {

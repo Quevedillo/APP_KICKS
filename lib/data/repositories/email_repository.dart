@@ -90,4 +90,23 @@ class EmailRepository {
       attachmentUrl,
     );
   }
+
+  /// Enviar factura de cancelación/reembolso
+  Future<bool> sendCancellationInvoice(
+    String email,
+    String orderId,
+    double refundAmount,
+    String customerName,
+    List<Map<String, dynamic>> items, {
+    String? reason,
+  }) {
+    return emailService.sendCancellationInvoiceEmail(
+      email,
+      orderId,
+      refundAmount,
+      customerName,
+      items,
+      reason: reason,
+    );
+  }
 }

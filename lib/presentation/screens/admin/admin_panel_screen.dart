@@ -1486,32 +1486,226 @@ class _OrderDetailSheet extends ConsumerWidget {
                   ],
                 ),
                 const SizedBox(height: 16),
-                if (order.status != 'completed' && order.status != 'cancelled')
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
-                          onPressed: () => _updateStatus(context, ref, 'completed'),
-                          child: const Text('Completar'),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
-                          onPressed: () => _showCancelWithReasonDialog(context, ref),
-                          child: const Text('Cancelar'),
-                        ),
-                      ),
-                    ],
+                // ===== CAMBIAR ESTADO =====
+                if (order.status != 'completed' && order.status != 'cancelled' && order.status != 'refunded') ...[
+                  const SizedBox(height: 8),
+                  const Text('Cambiar Estado', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  const SizedBox(height: 10),
+                  _StatusChangeDropdown(
+                    currentStatus: order.status,
+                    onChanged: (newStatus) {
+                      if (newStatus == 'cancelled') {
+                        _showCancelWithReasonDialog(context, ref);
+                      } else {
+                        _updateStatus(context, ref, newStatus);
+                      }
+                    },
                   ),
+                  const SizedBox(height: 16),
+                ],
+
+                // ===== SOLICITUD DE REEMBOLSO =====
+                if (order.returnStatus == 'requested') ...[
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.orange.withOpacity(0.5)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.warning_amber, color: Colors.orange, size: 22),
+                            const SizedBox(width: 8),
+                            const Text(
+                              'Solicitud de Reembolso Pendiente',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.orange,
+                                fontSize: 15,
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (order.cancelledReason != null && order.cancelledReason!.isNotEmpty) ...[
+                          const SizedBox(height: 12),
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.black26,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('Motivo del cliente:', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                                const SizedBox(height: 4),
+                                Text(order.cancelledReason!, style: const TextStyle(fontSize: 14)),
+                              ],
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.green,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                ),
+                                onPressed: () => _approveRefund(context, ref),
+                                icon: const Icon(Icons.check_circle, size: 18),
+                                label: const Text('Aprobar Reembolso'),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.red,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                ),
+                                onPressed: () => _rejectRefund(context, ref),
+                                icon: const Icon(Icons.cancel, size: 18),
+                                label: const Text('Rechazar'),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _approveRefund(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.grey[900],
+        title: const Text('Aprobar Reembolso'),
+        content: Text(
+          '¿Aprobar el reembolso de €${(order.totalPrice / 100).toStringAsFixed(2)} '
+          'para el pedido #${order.displayId}?\n\n'
+          'Se procesará el reembolso en Stripe y se enviará la factura de cancelación al cliente.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('No'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Sí, aprobar', style: TextStyle(color: Colors.green)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    final success = await ref.read(adminRepositoryProvider).approveRefundRequest(order.id);
+    if (success) {
+      // Enviar email con factura de cancelación
+      final emailRepo = ref.read(emailRepositoryProvider);
+      await emailRepo.sendCancellationInvoice(
+        order.shippingEmail ?? '',
+        order.displayId,
+        order.totalPrice / 100,
+        order.shippingName ?? 'Cliente',
+        order.items.map((item) => {
+          'name': item.productName,
+          'size': item.size,
+          'quantity': item.quantity,
+          'price': item.price / 100,
+        }).toList(),
+        reason: order.cancelledReason,
+      );
+    }
+
+    if (context.mounted) {
+      Navigator.pop(context);
+      ref.invalidate(adminAllOrdersProvider);
+      ref.invalidate(adminReturnRequestsProvider);
+      ref.invalidate(adminDashboardStatsProvider);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(success
+              ? 'Reembolso aprobado y procesado. Factura enviada al cliente.'
+              : 'Error al procesar el reembolso'),
+          backgroundColor: success ? Colors.green : Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _rejectRefund(BuildContext context, WidgetRef ref) async {
+    final reasonController = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.grey[900],
+        title: const Text('Rechazar Reembolso'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('¿Rechazar la solicitud de reembolso del pedido #${order.displayId}?'),
+            const SizedBox(height: 16),
+            TextField(
+              controller: reasonController,
+              maxLines: 3,
+              decoration: InputDecoration(
+                labelText: 'Motivo del rechazo (opcional)',
+                filled: true,
+                fillColor: Colors.grey[800],
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Rechazar', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    final success = await ref.read(adminRepositoryProvider).rejectRefundRequest(
+      order.id,
+      reason: reasonController.text.trim().isEmpty ? null : reasonController.text.trim(),
+    );
+    if (context.mounted) {
+      Navigator.pop(context);
+      ref.invalidate(adminAllOrdersProvider);
+      ref.invalidate(adminReturnRequestsProvider);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(success ? 'Solicitud de reembolso rechazada' : 'Error al rechazar'),
+          backgroundColor: success ? Colors.orange : Colors.red,
+        ),
+      );
+    }
   }
 
   void _showCancelWithReasonDialog(BuildContext context, WidgetRef ref) {
@@ -1737,6 +1931,102 @@ class _OrderDetailSheet extends ConsumerWidget {
       default: return Colors.blue;
     }
   }
+}
+
+class _StatusChangeDropdown extends StatelessWidget {
+  final String currentStatus;
+  final ValueChanged<String> onChanged;
+
+  const _StatusChangeDropdown({
+    required this.currentStatus,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // Definir transiciones válidas de estado
+    final validTransitions = _getValidTransitions(currentStatus);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.grey[850],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[700]!),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: null,
+          hint: const Text('Seleccionar nuevo estado...'),
+          isExpanded: true,
+          dropdownColor: Colors.grey[850],
+          items: validTransitions.map((status) {
+            final config = _getStatusConfig(status);
+            return DropdownMenuItem(
+              value: status,
+              child: Row(
+                children: [
+                  Container(
+                    width: 12,
+                    height: 12,
+                    decoration: BoxDecoration(
+                      color: config.color,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(config.label),
+                ],
+              ),
+            );
+          }).toList(),
+          onChanged: (value) {
+            if (value != null) onChanged(value);
+          },
+        ),
+      ),
+    );
+  }
+
+  List<String> _getValidTransitions(String status) {
+    switch (status) {
+      case 'paid':
+        return ['processing', 'shipped', 'cancelled'];
+      case 'processing':
+        return ['shipped', 'cancelled'];
+      case 'shipped':
+        return ['delivered', 'cancelled'];
+      case 'delivered':
+        return ['completed', 'cancelled'];
+      case 'pending':
+        return ['processing', 'cancelled'];
+      default:
+        return [];
+    }
+  }
+
+  _StatusConfigData _getStatusConfig(String status) {
+    switch (status) {
+      case 'processing':
+        return _StatusConfigData(Colors.cyan, 'Procesando');
+      case 'shipped':
+        return _StatusConfigData(Colors.indigo, 'Enviado');
+      case 'delivered':
+        return _StatusConfigData(Colors.teal, 'Entregado');
+      case 'completed':
+        return _StatusConfigData(Colors.green, 'Completado');
+      case 'cancelled':
+        return _StatusConfigData(Colors.red, 'Cancelado');
+      default:
+        return _StatusConfigData(Colors.grey, status);
+    }
+  }
+}
+
+class _StatusConfigData {
+  final Color color;
+  final String label;
+  _StatusConfigData(this.color, this.label);
 }
 
 class _ProductDetailSheet extends ConsumerWidget {

@@ -143,6 +143,22 @@ class EmailService {
     );
   }
 
+  /// Enviar factura de cancelación/reembolso al cliente
+  Future<bool> sendCancellationInvoiceEmail(
+    String userEmail,
+    String orderId,
+    double refundAmount,
+    String customerName,
+    List<Map<String, dynamic>> items, {
+    String? reason,
+  }) async {
+    return _sendEmail(
+      to: userEmail,
+      subject: 'Factura de Cancelación - Pedido #$orderId - KicksPremium',
+      htmlBody: _getCancellationInvoiceTemplate(orderId, refundAmount, customerName, items, reason),
+    );
+  }
+
   /// Función genérica para enviar emails via SMTP
   Future<bool> _sendEmail({
     required String to,
@@ -521,6 +537,109 @@ class EmailService {
           </div>
           <div class="footer">
             <p>© 2026 KicksPremium</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    ''';
+  }
+
+  String _getCancellationInvoiceTemplate(
+    String orderId,
+    double refundAmount,
+    String customerName,
+    List<Map<String, dynamic>> items,
+    String? reason,
+  ) {
+    String itemsHtml = items.map((item) {
+      final price = item['price'] is num ? (item['price'] as num).toStringAsFixed(2) : item['price'].toString();
+      final qty = item['quantity'] ?? 1;
+      final total = (item['price'] is num ? (item['price'] as num).toDouble() : 0.0) * (qty is num ? qty.toInt() : 1);
+      return '''
+        <tr>
+          <td style="padding: 10px; border-bottom: 1px solid #ddd;">${item['name']}</td>
+          <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: center;">${item['size'] ?? '-'}</td>
+          <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: center;">$qty</td>
+          <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: right;">€$price</td>
+          <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: right;">€${total.toStringAsFixed(2)}</td>
+        </tr>
+      ''';
+    }).join();
+
+    String reasonSection = reason != null && reason.isNotEmpty
+        ? '''
+          <div style="background: #fff3cd; padding: 15px; border-left: 4px solid #ffc107; margin: 20px 0; border-radius: 4px;">
+            <p style="margin: 0;"><strong>Motivo de cancelación:</strong></p>
+            <p style="margin: 5px 0 0 0;">$reason</p>
+          </div>
+        '''
+        : '';
+
+    return '''
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <style>
+          body { font-family: Arial, sans-serif; color: #333; margin: 0; padding: 0; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: #1a1a1a; color: #fff; padding: 25px; text-align: center; }
+          .header h1 { margin: 0; font-size: 22px; }
+          .header p { margin: 5px 0 0; color: #ccc; }
+          table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+          th { background: #f0f0f0; padding: 10px; text-align: left; font-weight: bold; }
+          .total-row { font-size: 18px; font-weight: bold; color: #dc3545; }
+          .refund-box { background: #d4edda; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0; }
+          .refund-amount { font-size: 28px; font-weight: bold; color: #28a745; }
+          .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; border-top: 1px solid #eee; margin-top: 30px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>FACTURA DE CANCELACIÓN</h1>
+            <p>Pedido #$orderId</p>
+          </div>
+          <div style="padding: 20px; background: #f9f9f9;">
+            <p>Hola <strong>$customerName</strong>,</p>
+            <p>Tu pedido <strong>#$orderId</strong> ha sido cancelado y se ha procesado el reembolso correspondiente.</p>
+            
+            $reasonSection
+            
+            <h3>Detalle de artículos reembolsados:</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>Producto</th>
+                  <th style="text-align: center;">Talla</th>
+                  <th style="text-align: center;">Cantidad</th>
+                  <th style="text-align: right;">Precio</th>
+                  <th style="text-align: right;">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                $itemsHtml
+              </tbody>
+            </table>
+            
+            <div class="refund-box">
+              <p style="margin: 0 0 5px; font-size: 14px; color: #666;">IMPORTE REEMBOLSADO</p>
+              <p class="refund-amount" style="margin: 0;">€${refundAmount.toStringAsFixed(2)}</p>
+              <p style="margin: 10px 0 0; font-size: 13px; color: #666;">
+                El reembolso se reflejará en tu método de pago original en un plazo de 5-10 días hábiles.
+              </p>
+            </div>
+            
+            <div style="background: #e8f4fd; padding: 15px; border-radius: 8px; margin: 20px 0;">
+              <p style="margin: 0; font-size: 13px;">
+                <strong>📌 Nota:</strong> Este email sirve como comprobante oficial de tu cancelación y reembolso. 
+                Guárdalo para tus registros.
+              </p>
+            </div>
+          </div>
+          <div class="footer">
+            <p>¿Tienes alguna pregunta? Contáctanos en support@kickspremium.com</p>
+            <p>© 2026 KicksPremium. Todos los derechos reservados.</p>
           </div>
         </div>
       </body>

@@ -40,7 +40,7 @@ class CartItem {
     return CartItem(
       productId: json['product_id'] as String,
       product: Product.fromJson(json['product'] as Map<String, dynamic>),
-      quantity: json['quantity'] as int,
+      quantity: (json['quantity'] as num).toInt(),
       size: json['size'] as String,
     );
   }

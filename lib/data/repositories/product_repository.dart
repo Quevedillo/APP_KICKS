@@ -12,7 +12,7 @@ class ProductRepository {
     String? sortBy,
     bool ascending = false,
   }) async {
-    var query = _client.from('products').select().eq('is_active', true).gt('stock', 0);
+    var query = _client.from('products').select().eq('is_active', true);
 
     if (categorySlug != null) {
       final categoryData = await _client
@@ -27,25 +27,11 @@ class ProductRepository {
     // Ordenar
     if (sortBy == 'price') {
       final data = await query.order('price', ascending: ascending);
-      return _filterProductsWithStock(data);
+      return (data as List).map((e) => Product.fromJson(e)).toList();
     }
     
     final data = await query.order('created_at', ascending: false);
-    return _filterProductsWithStock(data);
-  }
-
-  List<Product> _filterProductsWithStock(List<dynamic> data) {
-    return (data)
-        .map((e) => Product.fromJson(e))
-        .where((p) {
-          if (p.sizesAvailable.isEmpty) return false;
-          return p.sizesAvailable.values.any((qty) {
-            if (qty is int) return qty > 0;
-            if (qty is String) return (int.tryParse(qty) ?? 0) > 0;
-            return false;
-          });
-        })
-        .toList();
+    return (data as List).map((e) => Product.fromJson(e)).toList();
   }
 
   Future<Product?> getProductBySlug(String slug) async {
@@ -83,12 +69,11 @@ class ProductRepository {
         .from('products')
         .select()
         .eq('is_active', true)
-        .gt('stock', 0)
         .or('name.ilike.%$query%,brand.ilike.%$query%,description.ilike.%$query%')
         .order('created_at', ascending: false)
         .limit(20);
     
-    return _filterProductsWithStock(data);
+    return (data as List).map((e) => Product.fromJson(e)).toList();
   }
 
   Future<List<Product>> getRelatedProducts(String categoryId, String excludeProductId) async {
@@ -97,10 +82,9 @@ class ProductRepository {
         .select()
         .eq('category_id', categoryId)
         .eq('is_active', true)
-        .gt('stock', 0)
         .neq('id', excludeProductId)
         .limit(4);
     
-    return _filterProductsWithStock(data);
+    return (data as List).map((e) => Product.fromJson(e)).toList();
   }
 }
