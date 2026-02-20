@@ -27,6 +27,21 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen>
   int _discountAmount = 0;
   String? _discountError;
 
+  // Shipping address state
+  final _fullNameController = TextEditingController();
+  final _addressController = TextEditingController();
+  final _cityController = TextEditingController();
+  final _postalCodeController = TextEditingController();
+  final _phoneController = TextEditingController();
+  String _country = 'España';
+  bool _shippingValidated = false;
+
+  bool get _shippingComplete =>
+      _fullNameController.text.trim().isNotEmpty &&
+      _addressController.text.trim().isNotEmpty &&
+      _cityController.text.trim().isNotEmpty &&
+      _postalCodeController.text.trim().isNotEmpty;
+
   @override
   void initState() {
     super.initState();
@@ -46,6 +61,11 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen>
   void dispose() {
     _animController.dispose();
     _discountCodeController.dispose();
+    _fullNameController.dispose();
+    _addressController.dispose();
+    _cityController.dispose();
+    _postalCodeController.dispose();
+    _phoneController.dispose();
     super.dispose();
   }
 
@@ -121,6 +141,24 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen>
   Future<void> _processPayment() async {
     if (_isProcessing) return;
 
+    // Validate shipping address first
+    setState(() => _shippingValidated = true);
+    if (!_shippingComplete) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Row(children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.white),
+            SizedBox(width: 8),
+            Text('Completa tu dirección de envío'),
+          ]),
+          backgroundColor: Colors.orange[800],
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+      return;
+    }
+
     setState(() {
       _isProcessing = true;
       _error = null;
@@ -179,6 +217,18 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen>
             discountAmount: _discountAmount > 0 ? _discountAmount : null,
             discountCodeId: _appliedDiscount?.id,
             shippingEmail: userEmail,
+            shippingName: _fullNameController.text.trim(),
+            shippingPhone: _phoneController.text.trim().isNotEmpty
+                ? _phoneController.text.trim()
+                : null,
+            shippingAddress: {
+              'full_name': _fullNameController.text.trim(),
+              'address': _addressController.text.trim(),
+              'city': _cityController.text.trim(),
+              'postal_code': _postalCodeController.text.trim(),
+              'country': _country,
+              'phone': _phoneController.text.trim(),
+            },
           );
 
           // 4.1 Registrar uso del código de descuento
@@ -459,6 +509,13 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen>
                 ),
               ),
 
+              // Shipping address section
+              _buildSectionCard(
+                title: 'DIRECCIÓN DE ENVÍO',
+                icon: Icons.local_shipping_outlined,
+                child: _buildShippingForm(),
+              ),
+
               // Discount Code Section
               _buildSectionCard(
                 title: 'CÓDIGO DE DESCUENTO',
@@ -707,6 +764,164 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen>
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildShippingForm() {
+    InputDecoration fieldDecoration(String hint, {String? suffix}) =>
+        InputDecoration(
+          hintText: hint,
+          hintStyle: const TextStyle(color: Colors.grey, fontSize: 14),
+          filled: true,
+          fillColor: Colors.grey[850],
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none,
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(
+              color: Colors.grey[700]!,
+              width: 0.5,
+            ),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(
+              color: Theme.of(context).primaryColor,
+              width: 1.5,
+            ),
+          ),
+          errorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: Colors.red, width: 1),
+          ),
+          suffixText: suffix,
+        );
+
+    bool showError(TextEditingController c) =>
+        _shippingValidated && c.text.trim().isEmpty;
+
+    return Column(
+      children: [
+        // Full name
+        TextField(
+          controller: _fullNameController,
+          onChanged: (_) => setState(() {}),
+          textCapitalization: TextCapitalization.words,
+          decoration: fieldDecoration('Nombre y apellidos').copyWith(
+            prefixIcon:
+                const Icon(Icons.person_outline, color: Colors.grey, size: 20),
+            errorText: showError(_fullNameController) ? 'Campo requerido' : null,
+          ),
+        ),
+        const SizedBox(height: 12),
+        // Address
+        TextField(
+          controller: _addressController,
+          onChanged: (_) => setState(() {}),
+          textCapitalization: TextCapitalization.sentences,
+          decoration: fieldDecoration('Calle y número').copyWith(
+            prefixIcon:
+                const Icon(Icons.home_outlined, color: Colors.grey, size: 20),
+            errorText: showError(_addressController) ? 'Campo requerido' : null,
+          ),
+        ),
+        const SizedBox(height: 12),
+        // City + Postal code
+        Row(
+          children: [
+            Expanded(
+              flex: 3,
+              child: TextField(
+                controller: _cityController,
+                onChanged: (_) => setState(() {}),
+                textCapitalization: TextCapitalization.words,
+                decoration: fieldDecoration('Ciudad').copyWith(
+                  errorText:
+                      showError(_cityController) ? 'Requerido' : null,
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              flex: 2,
+              child: TextField(
+                controller: _postalCodeController,
+                onChanged: (_) => setState(() {}),
+                keyboardType: TextInputType.number,
+                decoration: fieldDecoration('C.P.').copyWith(
+                  errorText:
+                      showError(_postalCodeController) ? 'Requerido' : null,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        // Country dropdown
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          decoration: BoxDecoration(
+            color: Colors.grey[850],
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey[700]!, width: 0.5),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: _country,
+              isExpanded: true,
+              dropdownColor: Colors.grey[850],
+              icon: const Icon(Icons.keyboard_arrow_down, color: Colors.grey),
+              items: const [
+                DropdownMenuItem(value: 'España', child: Text('España 🇪🇸')),
+                DropdownMenuItem(value: 'Portugal', child: Text('Portugal 🇵🇹')),
+                DropdownMenuItem(value: 'Francia', child: Text('Francia 🇫🇷')),
+                DropdownMenuItem(value: 'Italia', child: Text('Italia 🇮🇹')),
+                DropdownMenuItem(value: 'Alemania', child: Text('Alemania 🇩🇪')),
+                DropdownMenuItem(value: 'Reino Unido', child: Text('Reino Unido 🇬🇧')),
+                DropdownMenuItem(value: 'Otro', child: Text('Otro país')),
+              ],
+              onChanged: (v) => setState(() => _country = v!),
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        // Phone (optional)
+        TextField(
+          controller: _phoneController,
+          keyboardType: TextInputType.phone,
+          decoration: fieldDecoration('Teléfono (opcional)').copyWith(
+            prefixIcon:
+                const Icon(Icons.phone_outlined, color: Colors.grey, size: 20),
+            suffixText: 'Opcional',
+          ),
+        ),
+        // Incomplete warning indicator
+        if (_shippingValidated && !_shippingComplete) ...[
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.orange.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: Colors.orange.withOpacity(0.4)),
+            ),
+            child: const Row(
+              children: [
+                Icon(Icons.info_outline, color: Colors.orange, size: 16),
+                SizedBox(width: 8),
+                Text(
+                  'Completa todos los campos requeridos',
+                  style: TextStyle(color: Colors.orange, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
     );
   }
 

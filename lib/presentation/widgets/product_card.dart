@@ -6,13 +6,17 @@ import '../../data/models/product.dart';
 class ProductCard extends StatelessWidget {
   final Product product;
   final VoidCallback? onTap;
+  final String? categoryName; // optional chip shown in sales screen
 
-  const ProductCard({super.key, required this.product, this.onTap});
+  const ProductCard({super.key, required this.product, this.onTap, this.categoryName});
 
   @override
   Widget build(BuildContext context) {
     final currencyFormat = NumberFormat.currency(locale: 'es_ES', symbol: '€', decimalDigits: 0);
-    final price = currencyFormat.format(product.price / 100);
+
+    // Use effective (discounted) price as main price
+    final displayPrice = currencyFormat.format(product.effectivePrice / 100);
+    final originalPrice = currencyFormat.format(product.price / 100);
 
     // Contar tallas disponibles
     final availableSizesCount = product.sizesAvailable.entries
@@ -63,8 +67,29 @@ class ProductCard extends StatelessWidget {
                           ),
                   ),
 
-                  // Limited edition badge
-                  if (product.isLimitedEdition)
+                  // Discount badge (top-left, priority over LIMITED)
+                  if (product.hasDiscount)
+                    Positioned(
+                      top: 8,
+                      left: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: Colors.red[600],
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          product.discountLabel,
+                          style: const TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    )
+                  // Limited edition badge (only if no discount)
+                  else if (product.isLimitedEdition)
                     Positioned(
                       top: 8,
                       left: 8,
@@ -84,7 +109,7 @@ class ProductCard extends StatelessWidget {
                       ),
                     ),
 
-                  // Low stock badge
+                  // Low stock badge (top-right)
                   if (product.stock <= 5 && product.stock > 0)
                     Positioned(
                       top: 8,
@@ -139,20 +164,51 @@ class ProductCard extends StatelessWidget {
                       height: 1.2,
                     ),
                   ),
+
+                  // Category chip (shown in sales screen)
+                  if (categoryName != null) ...[
+                    const SizedBox(height: 4),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[800],
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        categoryName!,
+                        style: TextStyle(
+                          fontSize: 9,
+                          color: Colors.grey[400],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
                   
                   const SizedBox(height: 6),
                   
-                  // Price row
+                  // Price row: discounted price + original crossed out
                   Row(
                     children: [
                       Text(
-                        price,
-                        style: const TextStyle(
+                        displayPrice,
+                        style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
+                          color: product.hasDiscount ? Colors.red[400] : Colors.white,
                         ),
                       ),
-                      if (product.comparePrice != null && product.comparePrice! > product.price) ...[
+                      if (product.hasDiscount) ...[
+                        const SizedBox(width: 6),
+                        Text(
+                          originalPrice,
+                          style: const TextStyle(
+                            color: Colors.grey,
+                            fontSize: 12,
+                            decoration: TextDecoration.lineThrough,
+                          ),
+                        ),
+                      ] else if (product.comparePrice != null && product.comparePrice! > product.price) ...[
                         const SizedBox(width: 6),
                         Text(
                           currencyFormat.format(product.comparePrice! / 100),

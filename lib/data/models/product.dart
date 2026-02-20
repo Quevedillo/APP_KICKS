@@ -21,6 +21,12 @@ class Product {
   final List<String> images;
   final List<String> tags;
   final DateTime createdAt;
+  // Discount fields
+  final String? discountType;  // 'percentage' | 'fixed'
+  final double? discountValue;
+  // Release / collection fields
+  final String? releaseType;   // 'standard' | 'new' | 'restock'
+  final String? releaseDate;
 
   Product({
     required this.id,
@@ -44,7 +50,41 @@ class Product {
     required this.images,
     required this.tags,
     required this.createdAt,
+    this.discountType,
+    this.discountValue,
+    this.releaseType,
+    this.releaseDate,
   });
+
+  // ─── Computed getters ───────────────────────────────────────────────────────
+
+  /// Whether this product has an active discount
+  bool get hasDiscount =>
+      discountValue != null && discountValue! > 0 && discountType != null;
+
+  /// Final price after discount (in cents/integer cents, same unit as [price])
+  int get effectivePrice {
+    if (!hasDiscount) return price;
+    if (discountType == 'percentage') {
+      final discounted = price * (1 - discountValue! / 100);
+      return discounted.round();
+    } else {
+      // fixed: discountValue is in cents
+      final discountCents = (discountValue! * 100).round();
+      final discounted = price - discountCents;
+      return discounted < 0 ? 0 : discounted;
+    }
+  }
+
+  /// Human-readable discount badge label: "-20%" or "-10€"
+  String get discountLabel {
+    if (!hasDiscount) return '';
+    if (discountType == 'percentage') {
+      return '-${discountValue!.toStringAsFixed(0)}%';
+    } else {
+      return '-${discountValue!.toStringAsFixed(0)}€';
+    }
+  }
 
   factory Product.fromJson(Map<String, dynamic> json) {
     return Product(
@@ -69,6 +109,10 @@ class Product {
       images: List<String>.from(json['images'] ?? []),
       tags: List<String>.from(json['tags'] ?? []),
       createdAt: DateTime.parse(json['created_at'] as String),
+      discountType: json['discount_type'] as String?,
+      discountValue: (json['discount_value'] as num?)?.toDouble(),
+      releaseType: json['release_type'] as String?,
+      releaseDate: json['release_date'] as String?,
     );
   }
 
@@ -95,6 +139,66 @@ class Product {
       'images': images,
       'tags': tags,
       'created_at': createdAt.toIso8601String(),
+      'discount_type': discountType,
+      'discount_value': discountValue,
+      'release_type': releaseType,
+      'release_date': releaseDate,
     };
+  }
+
+  Product copyWith({
+    String? id,
+    String? name,
+    String? slug,
+    String? description,
+    Map<String, dynamic>? detailedDescription,
+    int? price,
+    int? comparePrice,
+    int? costPrice,
+    int? stock,
+    String? categoryId,
+    String? brand,
+    String? model,
+    String? colorway,
+    String? sku,
+    bool? isLimitedEdition,
+    bool? isFeatured,
+    bool? isActive,
+    Map<String, dynamic>? sizesAvailable,
+    List<String>? images,
+    List<String>? tags,
+    DateTime? createdAt,
+    String? discountType,
+    double? discountValue,
+    String? releaseType,
+    String? releaseDate,
+  }) {
+    return Product(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      slug: slug ?? this.slug,
+      description: description ?? this.description,
+      detailedDescription: detailedDescription ?? this.detailedDescription,
+      price: price ?? this.price,
+      comparePrice: comparePrice ?? this.comparePrice,
+      costPrice: costPrice ?? this.costPrice,
+      stock: stock ?? this.stock,
+      categoryId: categoryId ?? this.categoryId,
+      brand: brand ?? this.brand,
+      model: model ?? this.model,
+      colorway: colorway ?? this.colorway,
+      sku: sku ?? this.sku,
+      isLimitedEdition: isLimitedEdition ?? this.isLimitedEdition,
+      isFeatured: isFeatured ?? this.isFeatured,
+      isActive: isActive ?? this.isActive,
+      sizesAvailable: sizesAvailable ?? this.sizesAvailable,
+      images: images ?? this.images,
+      tags: tags ?? this.tags,
+      createdAt: createdAt ?? this.createdAt,
+      discountType: discountType ?? this.discountType,
+      discountValue: discountValue ?? this.discountValue,
+      releaseType: releaseType ?? this.releaseType,
+      releaseDate: releaseDate ?? this.releaseDate,
+    );
   }
 }

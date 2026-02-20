@@ -11,6 +11,8 @@ import 'screens/orders/orders_screen.dart';
 import 'screens/profile/profile_screen.dart';
 import 'screens/profile/change_password_screen.dart';
 import 'screens/admin/admin_panel_screen.dart';
+import 'screens/sales/sales_screen.dart';
+import 'screens/products/all_products_screen.dart';
 import 'widgets/main_scaffold.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -55,6 +57,23 @@ final goRouter = GoRouter(
         return CategoryScreen(slug: slug);
       },
     ),
+    // All products catalog
+    GoRoute(
+      path: '/products',
+      builder: (context, state) => const AllProductsScreen(),
+    ),
+    // Ofertas / Sales screens
+    GoRoute(
+      path: '/sales',
+      builder: (context, state) => const SalesScreen(),
+    ),
+    GoRoute(
+      path: '/sales/:collection',
+      builder: (context, state) {
+        final collection = state.pathParameters['collection']!;
+        return SalesScreen(collection: collection);
+      },
+    ),
     GoRoute(
       path: '/cart',
       builder: (context, state) => const CartScreen(),
@@ -84,3 +103,4 @@ final goRouter = GoRouter(
     ),
   ],
 );
+

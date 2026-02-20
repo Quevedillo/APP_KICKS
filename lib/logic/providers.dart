@@ -32,6 +32,7 @@ final orderRepositoryProvider = Provider<OrderRepository>((ref) {
   return OrderRepository(ref.watch(supabaseClientProvider));
 });
 
+
 final emailRepositoryProvider = Provider<EmailRepository>((ref) {
   return EmailRepository();
 });
@@ -91,6 +92,90 @@ final productsProvider = FutureProvider.family<List<Product>, String?>((ref, cat
 final featuredProductsProvider = FutureProvider<List<Product>>((ref) async {
   final products = await ref.watch(productRepositoryProvider).getProducts();
   return products.where((p) => p.isFeatured).toList();
+});
+
+/// Catálogo filtrado — used by AllProductsScreen
+final filteredProductsProvider = FutureProvider.family<List<Product>, ProductFilter>(
+  (ref, filter) async {
+    return ref.watch(productRepositoryProvider).getFilteredProducts(
+      brand: filter.brand,
+      categoryId: filter.categoryId,
+      color: filter.color,
+      minPriceCents: filter.minPriceCents,
+      maxPriceCents: filter.maxPriceCents,
+      sortBy: filter.sortBy,
+      searchQuery: filter.searchQuery,
+    );
+  },
+);
+
+class ProductFilter {
+  final String? brand;
+  final String? categoryId;
+  final String? color;
+  final int? minPriceCents;
+  final int? maxPriceCents;
+  final String sortBy;
+  final String? searchQuery;
+
+  const ProductFilter({
+    this.brand,
+    this.categoryId,
+    this.color,
+    this.minPriceCents,
+    this.maxPriceCents,
+    this.sortBy = 'newest',
+    this.searchQuery,
+  });
+
+  ProductFilter copyWith({
+    Object? brand = _sentinel,
+    Object? categoryId = _sentinel,
+    Object? color = _sentinel,
+    Object? minPriceCents = _sentinel,
+    Object? maxPriceCents = _sentinel,
+    String? sortBy,
+    Object? searchQuery = _sentinel,
+  }) {
+    return ProductFilter(
+      brand: brand == _sentinel ? this.brand : brand as String?,
+      categoryId: categoryId == _sentinel ? this.categoryId : categoryId as String?,
+      color: color == _sentinel ? this.color : color as String?,
+      minPriceCents: minPriceCents == _sentinel ? this.minPriceCents : minPriceCents as int?,
+      maxPriceCents: maxPriceCents == _sentinel ? this.maxPriceCents : maxPriceCents as int?,
+      sortBy: sortBy ?? this.sortBy,
+      searchQuery: searchQuery == _sentinel ? this.searchQuery : searchQuery as String?,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ProductFilter &&
+          brand == other.brand &&
+          categoryId == other.categoryId &&
+          color == other.color &&
+          minPriceCents == other.minPriceCents &&
+          maxPriceCents == other.maxPriceCents &&
+          sortBy == other.sortBy &&
+          searchQuery == other.searchQuery;
+
+  @override
+  int get hashCode => Object.hash(
+        brand, categoryId, color, minPriceCents, maxPriceCents, sortBy, searchQuery);
+}
+
+const _sentinel = Object();
+
+
+/// Productos en oferta (con descuento activo)
+final saleProductsProvider = FutureProvider<List<Product>>((ref) async {
+  return ref.watch(productRepositoryProvider).getProductsOnSale();
+});
+
+/// Productos por colección: 'limited', 'new', 'restock', 'offers'
+final collectionProductsProvider = FutureProvider.family<List<Product>, String>((ref, collection) async {
+  return ref.watch(productRepositoryProvider).getProductsByCollection(collection);
 });
 
 final productBySlugProvider = FutureProvider.family<Product?, String>((ref, slug) async {

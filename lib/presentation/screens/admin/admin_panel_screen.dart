@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../logic/providers.dart';
@@ -144,8 +145,8 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: Colors.grey[900],
-        title: const Text('Cerrar Sesión'),
-        content: const Text('¿Salir del panel de administrador?'),
+        title: const Text('Cerrar SesiÃ³n'),
+        content: const Text('Â¿Salir del panel de administrador?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -209,7 +210,7 @@ class AdminDashboardMobile extends ConsumerWidget {
                 ),
                 _StatCard(
                   title: 'Ingresos', 
-                  value: '€${stats['revenueToday'].toStringAsFixed(2)}', 
+                  value: 'â‚¬${stats['revenueToday'].toStringAsFixed(2)}', 
                   icon: Icons.euro, 
                   color: Colors.green
                 ),
@@ -236,7 +237,7 @@ class AdminDashboardMobile extends ConsumerWidget {
                 Expanded(
                   child: _KPICard(
                     title: 'Ventas del Mes',
-                    value: '€${stats['monthlyRevenue']?.toStringAsFixed(2) ?? '0.00'}',
+                    value: 'â‚¬${stats['monthlyRevenue']?.toStringAsFixed(2) ?? '0.00'}',
                     icon: Icons.trending_up,
                     color: Colors.green,
                   ),
@@ -254,7 +255,7 @@ class AdminDashboardMobile extends ConsumerWidget {
             ),
             const SizedBox(height: 12),
             _KPICard(
-              title: 'Producto Más Vendido',
+              title: 'Producto MÃ¡s Vendido',
               value: stats['topProduct'] ?? 'Sin datos',
               icon: Icons.star,
               color: Colors.amber,
@@ -264,7 +265,7 @@ class AdminDashboardMobile extends ConsumerWidget {
             
             // Sales Chart - Last 7 Days
             const Text(
-              'Ventas Últimos 7 Días',
+              'Ventas Ãšltimos 7 DÃ­as',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.amber),
             ),
             const SizedBox(height: 16),
@@ -283,7 +284,7 @@ class AdminDashboardMobile extends ConsumerWidget {
             
             // Quick Email Access
             const Text(
-              'Acceso Rápido',
+              'Acceso RÃ¡pido',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.amber),
             ),
             const SizedBox(height: 12),
@@ -291,14 +292,14 @@ class AdminDashboardMobile extends ConsumerWidget {
             _QuickActionCard(
               icon: Icons.add_box,
               title: 'Nuevo Producto',
-              subtitle: 'Añadir sneaker al catálogo',
+              subtitle: 'AÃ±adir sneaker al catÃ¡logo',
               color: Colors.pink,
               onTap: () => _showProductForm(context, ref),
             ),
             const SizedBox(height: 8),
             _QuickActionCard(
               icon: Icons.category,
-              title: 'Gestionar Categorías',
+              title: 'Gestionar CategorÃ­as',
               subtitle: 'Organizar colecciones',
               color: Colors.purple,
               onTap: () => ref.read(adminSelectedSectionProvider.notifier).setSection(3),
@@ -307,7 +308,7 @@ class AdminDashboardMobile extends ConsumerWidget {
             _QuickActionCard(
               icon: Icons.shopping_bag,
               title: 'Ver Pedidos',
-              subtitle: 'Gestionar órdenes',
+              subtitle: 'Gestionar Ã³rdenes',
               color: Colors.green,
               onTap: () => ref.read(adminSelectedSectionProvider.notifier).setSection(1),
             ),
@@ -327,7 +328,7 @@ class AdminDashboardMobile extends ConsumerWidget {
               data: (orders) => Column(
                 children: orders.take(5).map((order) => _ActivityItem(
                   title: 'Pedido #${order.displayId}',
-                  subtitle: '${DateFormat('dd/MM HH:mm').format(order.createdAt)} - €${(order.totalPrice / 100).toStringAsFixed(2)}',
+                  subtitle: '${DateFormat('dd/MM HH:mm').format(order.createdAt)} - â‚¬${(order.totalPrice / 100).toStringAsFixed(2)}',
                   icon: Icons.receipt,
                   onTap: () => _showOrderDetails(context, order),
                 )).toList(),
@@ -504,96 +505,895 @@ class _ActivityItem extends StatelessWidget {
 }
 
 // ========== ORDERS MOBILE ==========
-class AdminOrdersMobile extends ConsumerWidget {
+class AdminOrdersMobile extends ConsumerStatefulWidget {
   const AdminOrdersMobile({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final ordersAsync = ref.watch(adminAllOrdersProvider);
+  ConsumerState<AdminOrdersMobile> createState() => _AdminOrdersMobileState();
+}
 
-    return ordersAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (err, stack) => Center(child: Text('Error: $err')),
-      data: (orders) => ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: orders.length,
-        itemBuilder: (context, index) {
-          final order = orders[index];
-          return GestureDetector(
-            onTap: () => _showOrderDetails(context, order),
-            child: Container(
-              margin: const EdgeInsets.only(bottom: 12),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.grey[900],
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Pedido #${order.displayId}',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: _getStatusColor(order.status).withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          order.statusLabel,
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: _getStatusColor(order.status),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text('Cliente: ${order.shippingName ?? order.userId}', style: TextStyle(color: Colors.grey[400], fontSize: 13)),
-                  Text('Total: €${(order.totalPrice / 100).toStringAsFixed(2)}', style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold)),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
+class _AdminOrdersMobileState extends ConsumerState<AdminOrdersMobile> {
+  String _searchQuery = '';
+  String _statusFilter = 'all';
 
-  void _showOrderDetails(BuildContext context, Order order) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => _OrderDetailSheet(order: order),
-    );
-  }
+  static const _statusOptions = [
+    ('all', 'Todos'),
+    ('paid', 'Pagado'),
+    ('processing', 'Procesando'),
+    ('shipped', 'Enviado'),
+    ('delivered', 'Entregado'),
+    ('cancelled', 'Cancelado'),
+    ('refunded', 'Reembolsado'),
+    ('failed', 'Fallido'),
+  ];
 
   Color _getStatusColor(String status) {
     switch (status) {
-      case 'completed':
       case 'paid':
+      case 'completed':
         return Colors.green;
-      case 'pending':
       case 'processing':
         return Colors.orange;
-      case 'cancelled':
-      case 'failed':
-        return Colors.red;
       case 'shipped':
       case 'delivered':
         return Colors.blue;
+      case 'cancelled':
+      case 'failed':
+        return Colors.red;
+      case 'refunded':
+        return Colors.purple;
+      case 'return_requested':
+        return Colors.amber;
       default:
         return Colors.grey;
     }
   }
+
+  @override
+  Widget build(BuildContext context) {
+    final ordersAsync = ref.watch(adminAllOrdersProvider);
+
+    return Column(
+      children: [
+        // Search
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+          child: TextField(
+            onChanged: (v) => setState(() => _searchQuery = v.toLowerCase()),
+            decoration: InputDecoration(
+              hintText: 'Buscar pedido o cliente...',
+              hintStyle: const TextStyle(color: Colors.grey, fontSize: 13),
+              prefixIcon: const Icon(Icons.search, color: Colors.grey, size: 20),
+              filled: true,
+              fillColor: Colors.grey[900],
+              contentPadding: const EdgeInsets.symmetric(vertical: 0),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+            ),
+          ),
+        ),
+        // Status filter chips
+        SizedBox(
+          height: 40,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            separatorBuilder: (_, __) => const SizedBox(width: 8),
+            itemCount: _statusOptions.length,
+            itemBuilder: (context, i) {
+              final (value, label) = _statusOptions[i];
+              final selected = _statusFilter == value;
+              return GestureDetector(
+                onTap: () => setState(() => _statusFilter = value),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: selected
+                        ? (value == 'all'
+                            ? Theme.of(context).primaryColor
+                            : _getStatusColor(value))
+                        : Colors.grey[850],
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: selected ? Colors.black : Colors.grey,
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 8),
+        // Orders list
+        Expanded(
+          child: ordersAsync.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (err, _) => Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                  const SizedBox(height: 12),
+                  Text('Error: $err', style: const TextStyle(color: Colors.grey)),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () => ref.invalidate(adminAllOrdersProvider),
+                    child: const Text('REINTENTAR'),
+                  ),
+                ],
+              ),
+            ),
+            data: (orders) {
+              final filtered = orders.where((o) {
+                final matchStatus =
+                    _statusFilter == 'all' || o.status == _statusFilter;
+                final matchSearch = _searchQuery.isEmpty ||
+                    o.displayId.toLowerCase().contains(_searchQuery) ||
+                    (o.shippingName?.toLowerCase().contains(_searchQuery) ?? false) ||
+                    (o.shippingEmail?.toLowerCase().contains(_searchQuery) ?? false) ||
+                    o.userId.toLowerCase().contains(_searchQuery);
+                return matchStatus && matchSearch;
+              }).toList();
+
+              if (filtered.isEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.receipt_long_outlined,
+                          size: 48, color: Colors.grey[700]),
+                      const SizedBox(height: 12),
+                      const Text('No hay pedidos',
+                          style: TextStyle(color: Colors.grey)),
+                    ],
+                  ),
+                );
+              }
+
+              return RefreshIndicator(
+                onRefresh: () async => ref.invalidate(adminAllOrdersProvider),
+                child: ListView.builder(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  itemCount: filtered.length,
+                  itemBuilder: (context, index) {
+                    final order = filtered[index];
+                    return GestureDetector(
+                      onTap: () => _showOrderDetail(context, order),
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 10),
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[900],
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: _getStatusColor(order.status).withOpacity(0.3),
+                            width: 0.5,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            // Status indicator
+                            Container(
+                              width: 4,
+                              height: 48,
+                              margin: const EdgeInsets.only(right: 12),
+                              decoration: BoxDecoration(
+                                color: _getStatusColor(order.status),
+                                borderRadius: BorderRadius.circular(2),
+                              ),
+                            ),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        'Pedido #${order.displayId}',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                      Text(
+                                        'â‚¬${(order.totalPrice / 100).toStringAsFixed(2)}',
+                                        style: const TextStyle(
+                                          color: Colors.amber,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    order.shippingName ??
+                                        order.shippingEmail ??
+                                        order.userId.substring(0, 8),
+                                    style: TextStyle(
+                                        color: Colors.grey[400], fontSize: 12),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 8, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: _getStatusColor(order.status)
+                                              .withOpacity(0.15),
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: Text(
+                                          order.statusLabel,
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.bold,
+                                            color: _getStatusColor(order.status),
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        '${order.items.length} art.',
+                                        style: TextStyle(
+                                            color: Colors.grey[600],
+                                            fontSize: 11),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const Icon(Icons.chevron_right,
+                                color: Colors.grey, size: 20),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showOrderDetail(BuildContext context, Order order) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _OrderDetailSheet(order: order),
+    );
+  }
 }
+
+// â”€â”€â”€ Order Detail Sheet â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+class _OrderDetailSheet extends ConsumerStatefulWidget {
+  final Order order;
+  const _OrderDetailSheet({required this.order});
+
+  @override
+  ConsumerState<_OrderDetailSheet> createState() => _OrderDetailSheetState();
+}
+
+class _OrderDetailSheetState extends ConsumerState<_OrderDetailSheet> {
+  late Order _order;
+  bool _isLoading = false;
+
+  static const _transitions = {
+    'paid': ['processing', 'cancelled'],
+    'processing': ['shipped', 'cancelled'],
+    'shipped': ['delivered', 'return_requested'],
+    'delivered': ['refunded'],
+    'return_requested': ['refunded', 'shipped'],
+    'cancelled': <String>[],
+    'refunded': <String>[],
+    'failed': ['paid'],
+  };
+
+  static const _statusLabels = {
+    'paid': 'Pagado',
+    'processing': 'En proceso',
+    'shipped': 'Enviado',
+    'delivered': 'Entregado',
+    'cancelled': 'Cancelado',
+    'refunded': 'Reembolsado',
+    'return_requested': 'Dev. solicitada',
+    'failed': 'Fallido',
+  };
+
+  static const _statusIcons = {
+    'paid': Icons.check_circle_outline,
+    'processing': Icons.sync,
+    'shipped': Icons.local_shipping,
+    'delivered': Icons.done_all,
+    'cancelled': Icons.cancel_outlined,
+    'refunded': Icons.currency_exchange,
+    'return_requested': Icons.assignment_return_outlined,
+    'failed': Icons.error_outline,
+  };
+
+  Color _statusColor(String status) {
+    switch (status) {
+      case 'paid':
+      case 'completed':
+        return Colors.green;
+      case 'processing':
+        return Colors.orange;
+      case 'shipped':
+      case 'delivered':
+        return Colors.blue;
+      case 'cancelled':
+      case 'failed':
+        return Colors.red;
+      case 'refunded':
+        return Colors.purple;
+      case 'return_requested':
+        return Colors.amber;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _order = widget.order;
+  }
+
+  Future<void> _changeStatus(String newStatus) async {
+    // Ask for reason when cancelling or refunding
+    String? reason;
+    if (newStatus == 'cancelled' || newStatus == 'refunded') {
+      reason = await _askReason(newStatus);
+      if (reason == null) return; // user dismissed
+    }
+
+    setState(() => _isLoading = true);
+
+    final repo = ref.read(orderRepositoryProvider);
+    bool ok;
+
+    if (newStatus == 'refunded') {
+      ok = await repo.refundOrder(_order.id, reason: reason);
+    } else {
+      ok = await repo.updateOrderStatus(_order.id, newStatus, reason: reason);
+    }
+
+    setState(() => _isLoading = false);
+
+    if (ok) {
+      // Reload order
+      final updated = await repo.getOrderById(_order.id);
+      if (updated != null) setState(() => _order = updated);
+      ref.invalidate(adminAllOrdersProvider);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(
+              'Estado actualizado a "${_statusLabels[newStatus] ?? newStatus}"'),
+          backgroundColor: Colors.green[800],
+          behavior: SnackBarBehavior.floating,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ));
+      }
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Error actualizando el estado'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ));
+      }
+    }
+  }
+
+  Future<String?> _askReason(String action) async {
+    final controller = TextEditingController();
+    return showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1C1C1C),
+        title: Text(
+          action == 'refunded'
+              ? 'Motivo del reembolso'
+              : 'Motivo de cancelaciÃ³n',
+        ),
+        content: TextField(
+          controller: controller,
+          maxLines: 3,
+          decoration: const InputDecoration(
+            hintText: 'Escribe el motivo...',
+            hintStyle: TextStyle(color: Colors.grey),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('CANCELAR'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
+            child: const Text('CONFIRMAR'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final nextStatuses = _transitions[_order.status] ?? [];
+    final addr = _order.shippingAddress;
+
+    return DraggableScrollableSheet(
+      initialChildSize: 0.9,
+      maxChildSize: 0.97,
+      minChildSize: 0.5,
+      builder: (context, scrollController) => Container(
+        decoration: const BoxDecoration(
+          color: Color(0xFF111111),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Stack(
+          children: [
+            ListView(
+              controller: scrollController,
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
+              children: [
+                // Handle
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[700],
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Header: ID + status badge
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Pedido #${_order.displayId}',
+                            style: const TextStyle(
+                                fontSize: 18, fontWeight: FontWeight.bold),
+                          ),
+                          Text(
+                            _order.createdAt.toLocal().toString().substring(0, 16),
+                            style: const TextStyle(
+                                color: Colors.grey, fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: _statusColor(_order.status).withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                            color: _statusColor(_order.status).withOpacity(0.4)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            _statusIcons[_order.status] ?? Icons.circle,
+                            size: 14,
+                            color: _statusColor(_order.status),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            _statusLabels[_order.status] ??
+                                _order.statusLabel,
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                              color: _statusColor(_order.status),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 20),
+
+                // â”€â”€ Status transitions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+                if (nextStatuses.isNotEmpty) ...[
+                  const Text(
+                    'CAMBIAR ESTADO',
+                    style: TextStyle(
+                        color: Colors.grey,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.8),
+                  ),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: nextStatuses
+                        .map((ns) => ElevatedButton.icon(
+                              onPressed:
+                                  _isLoading ? null : () => _changeStatus(ns),
+                              icon: Icon(_statusIcons[ns] ?? Icons.arrow_forward,
+                                  size: 16),
+                              label: Text(_statusLabels[ns] ?? ns),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor:
+                                    ns == 'cancelled' || ns == 'refunded'
+                                        ? Colors.red[900]
+                                        : ns == 'refunded'
+                                            ? Colors.purple[900]
+                                            : Colors.grey[800],
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 10),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10)),
+                              ),
+                            ))
+                        .toList(),
+                  ),
+                  const SizedBox(height: 20),
+                ],
+
+                // â”€â”€ Customer info â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+                _OrderSectionHeader('CLIENTE'),
+                _OrderInfoRow(Icons.person_outline, _order.shippingName ?? 'â€”'),
+                _OrderInfoRow(Icons.email_outlined,
+                    _order.shippingEmail ?? 'â€”', copyable: true),
+                if (_order.shippingPhone != null)
+                  _OrderInfoRow(Icons.phone_outlined, _order.shippingPhone!),
+                if (addr != null) ...[
+                  const SizedBox(height: 4),
+                  _InfoRow(
+                    Icons.location_on_outlined,
+                    [
+                      addr['address'],
+                      addr['postal_code'] != null && addr['city'] != null
+                          ? '${addr['postal_code']} ${addr['city']}'
+                          : addr['city'],
+                      addr['country'],
+                    ]
+                        .where((e) => e != null && e.toString().isNotEmpty)
+                        .join(', '),
+                  ),
+                ],
+
+                const SizedBox(height: 16),
+
+                // â”€â”€ Order items â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+                _OrderSectionHeader('ARTÃCULOS (${_order.items.length})'),
+                ..._order.items.map((item) => Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[900],
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(
+                        children: [
+                          if (item.productImage.isNotEmpty)
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(6),
+                              child: Image.network(
+                                item.productImage,
+                                width: 48,
+                                height: 48,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => Container(
+                                  width: 48,
+                                  height: 48,
+                                  color: Colors.grey[800],
+                                  child: const Icon(Icons.image_not_supported,
+                                      size: 20, color: Colors.grey),
+                                ),
+                              ),
+                            )
+                          else
+                            Container(
+                              width: 48,
+                              height: 48,
+                              decoration: BoxDecoration(
+                                color: Colors.grey[800],
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: const Icon(Icons.shopping_bag_outlined,
+                                  size: 20, color: Colors.grey),
+                            ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  item.productName,
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                Text(
+                                  '${item.productBrand}  Â·  Talla ${item.size}  Â·  x${item.quantity}',
+                                  style: TextStyle(
+                                      color: Colors.grey[400], fontSize: 12),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Text(
+                            'â‚¬${(item.price * item.quantity / 100).toStringAsFixed(2)}',
+                            style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.amber),
+                          ),
+                        ],
+                      ),
+                    )),
+
+                const SizedBox(height: 16),
+
+                // â”€â”€ Totals â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+                _OrderSectionHeader('IMPORTE'),
+                if (_order.discountAmount != null && _order.discountAmount! > 0)
+                  _OrderTotalRow('Descuento',
+                      '-â‚¬${(_order.discountAmount! / 100).toStringAsFixed(2)}',
+                      color: Colors.green),
+                _OrderTotalRow(
+                  'TOTAL',
+                  'â‚¬${(_order.totalPrice / 100).toStringAsFixed(2)}',
+                  bold: true,
+                  color: Colors.amber,
+                ),
+
+                const SizedBox(height: 16),
+
+                // â”€â”€ Stripe info â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+                if (_order.stripePaymentIntentId != null) ...[
+                  _OrderSectionHeader('PAGO'),
+                  _InfoRow(
+                    Icons.credit_card,
+                    _order.stripePaymentIntentId!,
+                    copyable: true,
+                    small: true,
+                  ),
+                ],
+
+                // â”€â”€ Cancel reason â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+                if (_order.cancelledReason != null &&
+                    _order.cancelledReason!.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  _OrderSectionHeader('MOTIVO'),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: Colors.red.withOpacity(0.3)),
+                    ),
+                    child: Text(
+                      _order.cancelledReason!,
+                      style: const TextStyle(color: Colors.red, fontSize: 13),
+                    ),
+                  ),
+                ],
+
+                // â”€â”€ Email template helper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+                const SizedBox(height: 20),
+                _OrderSectionHeader('EMAIL AL CLIENTE'),
+                _buildEmailHelper(),
+              ],
+            ),
+
+            // Loading overlay
+            if (_isLoading)
+              Container(
+                color: Colors.black54,
+                child: const Center(child: CircularProgressIndicator()),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmailHelper() {
+    final email = _order.shippingEmail ?? 'cliente@email.com';
+    final name = _order.shippingName ?? 'Cliente';
+    final id = '#${_order.displayId}';
+
+    final templates = {
+      'Enviado ðŸ“¦': '''Hola $name,
+
+Tu pedido $id ha sido enviado. RecibirÃ¡s el cÃ³digo de seguimiento en breve.
+
+Â¡Gracias por confiar en KicksPremium!''',
+      'Reembolso ðŸ’¸': '''Hola $name,
+
+Tu pedido $id ha sido reembolsado. El importe tardarÃ¡ entre 3-5 dÃ­as hÃ¡biles en reflejarse en tu cuenta.
+
+Lamentamos los inconvenientes.''',
+      'CancelaciÃ³n âŒ': '''Hola $name,
+
+Tu pedido $id ha sido cancelado. ${_order.cancelledReason ?? ''}
+
+Si tienes alguna duda contÃ¡ctanos.''',
+    };
+
+    return Column(
+      children: templates.entries
+          .map((e) => Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                decoration: BoxDecoration(
+                  color: Colors.grey[900],
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: ListTile(
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                  title: Text(e.key,
+                      style: const TextStyle(
+                          fontSize: 13, fontWeight: FontWeight.bold)),
+                  subtitle: Text(
+                    email,
+                    style:
+                        const TextStyle(fontSize: 11, color: Colors.grey),
+                  ),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.copy, size: 18, color: Colors.grey),
+                    tooltip: 'Copiar plantilla',
+                    onPressed: () {
+                      // Copy to clipboard
+                      // ignore: import_of_legacy_library_into_null_safe
+                      final full = 'Para: $email\n\n${e.value}';
+                      // Use Flutter clipboard
+                      _copyToClipboard(context, full);
+                    },
+                  ),
+                ),
+              ))
+          .toList(),
+    );
+  }
+
+  void _copyToClipboard(BuildContext context, String text) {
+    Clipboard.setData(ClipboardData(text: text));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('Plantilla copiada al portapapeles'),
+        backgroundColor: Colors.grey[800],
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+}
+
+class _OrderSectionHeader extends StatelessWidget {
+  final String title;
+  const _OrderSectionHeader(this.title);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Text(
+        title,
+        style: const TextStyle(
+          color: Colors.grey,
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
+          letterSpacing: 0.8,
+        ),
+      ),
+    );
+  }
+}
+
+class _OrderInfoRow_IGNORE_THIS {
+  final IconData icon;
+  final String text;
+  final bool copyable;
+  final bool small;
+
+  const _InfoRow(this.icon, this.text, {this.copyable = false, this.small = false});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: Colors.grey[600]),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                fontSize: small ? 11 : 13,
+                color: small ? Colors.grey : Colors.white,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          if (copyable)
+            IconButton(
+              icon: const Icon(Icons.copy, size: 16, color: Colors.grey),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(maxWidth: 32, maxHeight: 32),
+              onPressed: () => Clipboard.setData(ClipboardData(text: text)),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _OrderTotalRow extends StatelessWidget {
+  final String label;
+  final String value;
+  final bool bold;
+  final Color? color;
+
+  const _OrderTotalRow(this.label, this.value,
+      {this.bold = false, this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              color: bold ? Colors.white : Colors.grey,
+              fontWeight: bold ? FontWeight.bold : FontWeight.normal,
+            ),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              color: color ?? (bold ? Colors.white : Colors.grey),
+              fontWeight: bold ? FontWeight.bold : FontWeight.normal,
+              fontSize: bold ? 16 : 14,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+
 
 // ========== PRODUCTS MOBILE ==========
 class AdminProductsMobile extends ConsumerWidget {
@@ -678,7 +1478,7 @@ class AdminProductsMobile extends ConsumerWidget {
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
-                                Text('€${(product.price / 100).toStringAsFixed(2)}', style: const TextStyle(color: Colors.amber, fontSize: 12)),
+                                Text('â‚¬${(product.price / 100).toStringAsFixed(2)}', style: const TextStyle(color: Colors.amber, fontSize: 12)),
                                 Text(
                                   '${product.sizesAvailable.values.fold<int>(0, (sum, v) => sum + (v is int ? v : int.tryParse(v.toString()) ?? 0))} pares',
                                   style: TextStyle(color: Colors.grey[500], fontSize: 10),
@@ -788,19 +1588,19 @@ class AdminEmailsMobile extends StatelessWidget {
           
           _EmailTypeCard(
             icon: Icons.shopping_cart,
-            title: 'Confirmación de Compra',
+            title: 'ConfirmaciÃ³n de Compra',
             color: Colors.green,
             onTap: () {},
           ),
           _EmailTypeCard(
             icon: Icons.cancel,
-            title: 'Cancelación de Pedido',
+            title: 'CancelaciÃ³n de Pedido',
             color: Colors.red,
             onTap: () {},
           ),
           _EmailTypeCard(
             icon: Icons.local_shipping,
-            title: 'Actualización de Envío',
+            title: 'ActualizaciÃ³n de EnvÃ­o',
             color: Colors.blue,
             onTap: () {},
           ),
@@ -812,7 +1612,7 @@ class AdminEmailsMobile extends StatelessWidget {
           ),
           _EmailTypeCard(
             icon: Icons.local_offer,
-            title: 'Promoción',
+            title: 'PromociÃ³n',
             color: Colors.orange,
             onTap: () {},
           ),
@@ -915,7 +1715,7 @@ class AdminCategoriesMobile extends ConsumerWidget {
           child: Row(
             children: [
               const Expanded(
-                child: Text('Categorías', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                child: Text('CategorÃ­as', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
               ),
               ElevatedButton.icon(
                 onPressed: () => _showCategoryForm(context, ref),
@@ -1018,7 +1818,7 @@ class AdminCouponsMobile extends ConsumerWidget {
                     subtitle: Text(
                       coupon.discountType == 'percentage' 
                         ? '${coupon.discountValue}% de descuento'
-                        : '€${(coupon.discountValue / 100).toStringAsFixed(2)} de descuento',
+                        : 'â‚¬${(coupon.discountValue / 100).toStringAsFixed(2)} de descuento',
                       style: TextStyle(fontSize: 12, color: Colors.grey[400]),
                     ),
                     trailing: Text(
@@ -1073,7 +1873,7 @@ class _AdminFinanceMobileState extends ConsumerState<AdminFinanceMobile> {
         final totalProfit = (stats['totalProfit'] as num?)?.toDouble() ?? 0.0;
 
         // Select values based on period
-        final periodLabels = ['24 Horas', '7 Días', '1 Mes', 'Total'];
+        final periodLabels = ['24 Horas', '7 DÃ­as', '1 Mes', 'Total'];
         double periodRevenue;
         int periodOrders;
         switch (_selectedPeriod) {
@@ -1130,9 +1930,9 @@ class _AdminFinanceMobileState extends ConsumerState<AdminFinanceMobile> {
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 children: [
-                  _ReportCard(title: 'Ingresos ${periodLabels[_selectedPeriod]}', value: '€${periodRevenue.toStringAsFixed(2)}', icon: Icons.trending_up, color: Colors.green),
+                  _ReportCard(title: 'Ingresos ${periodLabels[_selectedPeriod]}', value: 'â‚¬${periodRevenue.toStringAsFixed(2)}', icon: Icons.trending_up, color: Colors.green),
                   _ReportCard(title: 'Pedidos', value: '$periodOrders', icon: Icons.shopping_bag, color: Colors.blue),
-                  _ReportCard(title: 'Ticket Medio', value: '€${avgTicket.toStringAsFixed(2)}', icon: Icons.shopping_cart, color: Colors.purple),
+                  _ReportCard(title: 'Ticket Medio', value: 'â‚¬${avgTicket.toStringAsFixed(2)}', icon: Icons.shopping_cart, color: Colors.purple),
                   _ReportCard(title: 'Pendientes', value: '$pendingOrders', icon: Icons.pending_actions, color: Colors.orange),
                 ],
               ),
@@ -1147,7 +1947,7 @@ class _AdminFinanceMobileState extends ConsumerState<AdminFinanceMobile> {
                   Expanded(
                     child: _KPICard(
                       title: 'Coste Total',
-                      value: '€${totalCost.toStringAsFixed(2)}',
+                      value: 'â‚¬${totalCost.toStringAsFixed(2)}',
                       icon: Icons.money_off,
                       color: Colors.red,
                     ),
@@ -1156,7 +1956,7 @@ class _AdminFinanceMobileState extends ConsumerState<AdminFinanceMobile> {
                   Expanded(
                     child: _KPICard(
                       title: 'Beneficio',
-                      value: '€${totalProfit.toStringAsFixed(2)}',
+                      value: 'â‚¬${totalProfit.toStringAsFixed(2)}',
                       icon: Icons.savings,
                       color: totalProfit >= 0 ? Colors.green : Colors.red,
                     ),
@@ -1169,7 +1969,7 @@ class _AdminFinanceMobileState extends ConsumerState<AdminFinanceMobile> {
                   Expanded(
                     child: _KPICard(
                       title: 'Ingresos Totales',
-                      value: '€${totalRevenue.toStringAsFixed(2)}',
+                      value: 'â‚¬${totalRevenue.toStringAsFixed(2)}',
                       icon: Icons.account_balance_wallet,
                       color: Colors.blue,
                     ),
@@ -1187,7 +1987,7 @@ class _AdminFinanceMobileState extends ConsumerState<AdminFinanceMobile> {
               ),
               
               const SizedBox(height: 24),
-              const Text('Ventas Últimos 7 Días', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const Text('Ventas Ãšltimos 7 DÃ­as', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 12),
               
               Container(
@@ -1262,7 +2062,7 @@ class _AdminSettingsMobileState extends State<AdminSettingsMobile> {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        const Text('Configuración', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+        const Text('ConfiguraciÃ³n', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
         const SizedBox(height: 24),
         
         _SettingSwitch(
@@ -1289,8 +2089,8 @@ class _AdminSettingsMobileState extends State<AdminSettingsMobile> {
         const SizedBox(height: 12),
         
         _SettingItem(title: 'Datos de la Tienda', icon: Icons.store, onTap: () {}),
-        _SettingItem(title: 'Métodos de Pago', icon: Icons.payment, onTap: () {}),
-        _SettingItem(title: 'Opciones de Envío', icon: Icons.local_shipping, onTap: () {}),
+        _SettingItem(title: 'MÃ©todos de Pago', icon: Icons.payment, onTap: () {}),
+        _SettingItem(title: 'Opciones de EnvÃ­o', icon: Icons.local_shipping, onTap: () {}),
         _SettingItem(title: 'Impuestos', icon: Icons.receipt, onTap: () {}),
       ],
     );
@@ -1408,7 +2208,7 @@ class _OrderDetailSheet extends ConsumerWidget {
                 _InfoRow(label: 'Fecha', value: DateFormat('dd MMM yyyy HH:mm').format(order.createdAt)),
                 _InfoRow(label: 'Cliente', value: order.shippingName ?? 'Desconocido'),
                 _InfoRow(label: 'Email', value: order.shippingEmail ?? 'N/A'),
-                _InfoRow(label: 'Teléfono', value: order.shippingPhone ?? 'N/A'),
+                _InfoRow(label: 'TelÃ©fono', value: order.shippingPhone ?? 'N/A'),
                 if (order.status == 'cancelled' && order.cancelledReason != null) ...[
                   const SizedBox(height: 10),
                   Container(
@@ -1427,7 +2227,7 @@ class _OrderDetailSheet extends ConsumerWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text('Motivo de cancelación', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 12)),
+                              const Text('Motivo de cancelaciÃ³n', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 12)),
                               const SizedBox(height: 4),
                               Text(order.cancelledReason!, style: TextStyle(color: Colors.grey[400], fontSize: 13)),
                             ],
@@ -1444,14 +2244,14 @@ class _OrderDetailSheet extends ConsumerWidget {
                   contentPadding: EdgeInsets.zero,
                   title: Text(item.productName, style: const TextStyle(fontSize: 14)),
                   subtitle: Text('Talla: ${item.size} x ${item.quantity}'),
-                  trailing: Text('€${(item.price / 100).toStringAsFixed(2)}'),
+                  trailing: Text('â‚¬${(item.price / 100).toStringAsFixed(2)}'),
                 )),
                 const Divider(color: Colors.grey),
-                _InfoRow(label: 'Subtotal', value: '€${(order.totalPrice / 100).toStringAsFixed(2)}'),
-                _InfoRow(label: 'Envío', value: '€0.00'),
-                _InfoRow(label: 'Total', value: '€${(order.totalPrice / 100).toStringAsFixed(2)}', isBold: true),
+                _InfoRow(label: 'Subtotal', value: 'â‚¬${(order.totalPrice / 100).toStringAsFixed(2)}'),
+                _InfoRow(label: 'EnvÃ­o', value: 'â‚¬0.00'),
+                _InfoRow(label: 'Total', value: 'â‚¬${(order.totalPrice / 100).toStringAsFixed(2)}', isBold: true),
                 const SizedBox(height: 30),
-                const Text('Dirección de Envío', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                const Text('DirecciÃ³n de EnvÃ­o', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                 const SizedBox(height: 10),
                 Text(order.shippingAddress?.toString() ?? 'No especificada', style: TextStyle(color: Colors.grey[400])),
                 const SizedBox(height: 30),
@@ -1598,9 +2398,9 @@ class _OrderDetailSheet extends ConsumerWidget {
         backgroundColor: Colors.grey[900],
         title: const Text('Aprobar Reembolso'),
         content: Text(
-          '¿Aprobar el reembolso de €${(order.totalPrice / 100).toStringAsFixed(2)} '
+          'Â¿Aprobar el reembolso de â‚¬${(order.totalPrice / 100).toStringAsFixed(2)} '
           'para el pedido #${order.displayId}?\n\n'
-          'Se procesará el reembolso en Stripe y se enviará la factura de cancelación al cliente.',
+          'Se procesarÃ¡ el reembolso en Stripe y se enviarÃ¡ la factura de cancelaciÃ³n al cliente.',
         ),
         actions: [
           TextButton(
@@ -1609,7 +2409,7 @@ class _OrderDetailSheet extends ConsumerWidget {
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Sí, aprobar', style: TextStyle(color: Colors.green)),
+            child: const Text('SÃ­, aprobar', style: TextStyle(color: Colors.green)),
           ),
         ],
       ),
@@ -1619,7 +2419,7 @@ class _OrderDetailSheet extends ConsumerWidget {
 
     final success = await ref.read(adminRepositoryProvider).approveRefundRequest(order.id);
     if (success) {
-      // Enviar email con factura de cancelación
+      // Enviar email con factura de cancelaciÃ³n
       final emailRepo = ref.read(emailRepositoryProvider);
       await emailRepo.sendCancellationInvoice(
         order.shippingEmail ?? '',
@@ -1662,7 +2462,7 @@ class _OrderDetailSheet extends ConsumerWidget {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('¿Rechazar la solicitud de reembolso del pedido #${order.displayId}?'),
+            Text('Â¿Rechazar la solicitud de reembolso del pedido #${order.displayId}?'),
             const SizedBox(height: 16),
             TextField(
               controller: reasonController,
@@ -1719,7 +2519,7 @@ class _OrderDetailSheet extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('¿Cancelar el pedido #${order.displayId}?'),
+            Text('Â¿Cancelar el pedido #${order.displayId}?'),
             const SizedBox(height: 16),
             TextField(
               controller: reasonController,
@@ -1744,7 +2544,7 @@ class _OrderDetailSheet extends ConsumerWidget {
               Navigator.pop(ctx);
               _cancelWithReason(context, ref, reasonController.text.trim());
             },
-            child: const Text('Sí, cancelar', style: TextStyle(color: Colors.red)),
+            child: const Text('SÃ­, cancelar', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -1768,7 +2568,7 @@ class _OrderDetailSheet extends ConsumerWidget {
     try {
       final pdf = pw.Document();
       final invoiceData = order.toInvoiceData();
-      final currencyFormat = NumberFormat.currency(locale: 'es_ES', symbol: '€');
+      final currencyFormat = NumberFormat.currency(locale: 'es_ES', symbol: 'â‚¬');
 
       pdf.addPage(
         pw.Page(
@@ -1812,9 +2612,9 @@ class _OrderDetailSheet extends ConsumerWidget {
                       pw.Text('Nombre: ${invoiceData['customerName']}'),
                       pw.Text('Email: ${invoiceData['customerEmail']}'),
                       if ((invoiceData['customerPhone'] as String).isNotEmpty)
-                        pw.Text('Teléfono: ${invoiceData['customerPhone']}'),
+                        pw.Text('TelÃ©fono: ${invoiceData['customerPhone']}'),
                       if ((invoiceData['shippingAddress'] as String).isNotEmpty)
-                        pw.Text('Dirección: ${invoiceData['shippingAddress']}'),
+                        pw.Text('DirecciÃ³n: ${invoiceData['shippingAddress']}'),
                     ],
                   ),
                 ),
@@ -1873,9 +2673,9 @@ class _OrderDetailSheet extends ConsumerWidget {
                   ),
                   child: pw.Column(
                     children: [
-                      pw.Text('¡Gracias por tu compra!', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                      pw.Text('Â¡Gracias por tu compra!', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
                       pw.SizedBox(height: 5),
-                      pw.Text('Si tienes alguna pregunta, contáctanos en support@kickspremium.com',
+                      pw.Text('Si tienes alguna pregunta, contÃ¡ctanos en support@kickspremium.com',
                         style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey)),
                     ],
                   ),
@@ -1944,7 +2744,7 @@ class _StatusChangeDropdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Definir transiciones válidas de estado
+    // Definir transiciones vÃ¡lidas de estado
     final validTransitions = _getValidTransitions(currentStatus);
 
     return Container(
@@ -2064,7 +2864,7 @@ class _ProductDetailSheet extends ConsumerWidget {
                   ),
                 const SizedBox(height: 20),
                 _InfoRow(label: 'Nombre', value: product.name),
-                _InfoRow(label: 'Precio (€)', value: (product.price / 100).toStringAsFixed(2)),
+                _InfoRow(label: 'Precio (â‚¬)', value: (product.price / 100).toStringAsFixed(2)),
                 _InfoRow(label: 'Stock', value: product.stock.toString()),
                 _InfoRow(label: 'Marca', value: product.brand ?? 'N/A'),
                 _InfoRow(label: 'SKU', value: product.sku ?? 'N/A'),
@@ -2123,7 +2923,7 @@ class _ProductDetailSheet extends ConsumerWidget {
       builder: (context) => AlertDialog(
         backgroundColor: Colors.grey[900],
         title: const Text('Eliminar Producto'),
-        content: Text('¿Estás seguro de que quieres eliminar "${product.name}"?'),
+        content: Text('Â¿EstÃ¡s seguro de que quieres eliminar "${product.name}"?'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('CANCELAR')),
           TextButton(
@@ -2144,7 +2944,7 @@ class _ProductDetailSheet extends ConsumerWidget {
   }
 }
 
-class _InfoRow extends StatelessWidget {
+class _OrderInfoRow_IGNORE_THIS {
   final String label;
   final String value;
   final Color? valueColor;
@@ -2233,10 +3033,18 @@ class _ProductFormDialogState extends ConsumerState<_ProductFormDialog> {
   late TextEditingController _skuController;
   bool _isSaving = false;
   
-  // Gestión de fotos
+  // GestiÃ³n de fotos
   List<String> _existingImages = [];
   final List<File> _newImages = [];
   
+  // Descuento en producto
+  bool _hasDiscount = false;
+  String _discountType = 'percentage'; // 'percentage' | 'fixed'
+  late TextEditingController _discountValueController;
+
+  // Tipo de colecciÃ³n / lanzamiento
+  String _releaseType = 'standard'; // 'standard' | 'new' | 'restock'
+
   // Inventario por talla (zapatos exclusivos)
   final Map<String, TextEditingController> _sizeControllers = {};
   static const List<String> _shoesSizes = [
@@ -2255,6 +3063,17 @@ class _ProductFormDialogState extends ConsumerState<_ProductFormDialog> {
     _skuController = TextEditingController(text: widget.product?.sku ?? '');
     _existingImages = List<String>.from(widget.product?.images ?? []);
     
+    // Descuento
+    final existingDiscountValue = widget.product?.discountValue;
+    _hasDiscount = existingDiscountValue != null && existingDiscountValue > 0;
+    _discountType = widget.product?.discountType ?? 'percentage';
+    _discountValueController = TextEditingController(
+      text: existingDiscountValue != null && existingDiscountValue > 0
+          ? existingDiscountValue.toStringAsFixed(0)
+          : '',
+    );
+    _releaseType = widget.product?.releaseType ?? 'standard';
+
     // Inicializar controladores de tallas
     for (final size in _shoesSizes) {
       final currentStock = widget.product?.sizesAvailable[size];
@@ -2270,6 +3089,7 @@ class _ProductFormDialogState extends ConsumerState<_ProductFormDialog> {
     _costPriceController.dispose();
     _brandController.dispose();
     _skuController.dispose();
+    _discountValueController.dispose();
     for (final c in _sizeControllers.values) {
       c.dispose();
     }
@@ -2323,7 +3143,7 @@ class _ProductFormDialogState extends ConsumerState<_ProductFormDialog> {
     final sizesAvailable = _buildSizesAvailable();
     if (sizesAvailable.isEmpty && _existingImages.isEmpty && _newImages.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Añade al menos una talla con stock')),
+        const SnackBar(content: Text('AÃ±ade al menos una talla con stock')),
       );
       return;
     }
@@ -2331,7 +3151,7 @@ class _ProductFormDialogState extends ConsumerState<_ProductFormDialog> {
     setState(() => _isSaving = true);
 
     try {
-      // Subir nuevas imágenes a Supabase Storage
+      // Subir nuevas imÃ¡genes a Supabase Storage
       final List<String> uploadedUrls = List.from(_existingImages);
       final supabase = ref.read(supabaseClientProvider);
       
@@ -2361,11 +3181,11 @@ class _ProductFormDialogState extends ConsumerState<_ProductFormDialog> {
           final url = supabase.storage.from('product-images').getPublicUrl(fileName);
           uploadedUrls.add(url);
         } catch (storageErr) {
-          print('⚠️ Error subiendo imagen: $storageErr');
+          print('âš ï¸ Error subiendo imagen: $storageErr');
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('Error al subir imagen. Crea el bucket "product-images" en Supabase Storage con acceso público.'),
+                content: Text('Error al subir imagen. Crea el bucket "product-images" en Supabase Storage con acceso pÃºblico.'),
                 backgroundColor: Colors.orange,
                 duration: const Duration(seconds: 5),
               ),
@@ -2384,6 +3204,12 @@ class _ProductFormDialogState extends ConsumerState<_ProductFormDialog> {
       final slug = widget.product?.slug ?? name.toLowerCase().replaceAll(' ', '-').replaceAll(RegExp(r'[^a-z0-9-]'), '');
       final totalStock = _calculateTotalStock();
 
+      // Discount
+      final discountValStr = _discountValueController.text.trim();
+      final discountVal = _hasDiscount && discountValStr.isNotEmpty
+          ? double.tryParse(discountValStr)
+          : null;
+
       final newProduct = Product(
         id: widget.product?.id ?? '',
         name: name,
@@ -2400,6 +3226,9 @@ class _ProductFormDialogState extends ConsumerState<_ProductFormDialog> {
         images: uploadedUrls,
         tags: widget.product?.tags ?? [],
         createdAt: widget.product?.createdAt ?? DateTime.now(),
+        discountType: discountVal != null ? _discountType : null,
+        discountValue: discountVal,
+        releaseType: _releaseType != 'standard' ? _releaseType : null,
       );
 
       final success = await ref.read(adminRepositoryProvider).upsertProduct(newProduct);
@@ -2433,7 +3262,7 @@ class _ProductFormDialogState extends ConsumerState<_ProductFormDialog> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            // --- Sección de fotos ---
+            // --- SecciÃ³n de fotos ---
             const Text('FOTOS DEL PRODUCTO', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.amber, fontSize: 14)),
             const SizedBox(height: 8),
             SizedBox(
@@ -2441,17 +3270,17 @@ class _ProductFormDialogState extends ConsumerState<_ProductFormDialog> {
               child: ListView(
                 scrollDirection: Axis.horizontal,
                 children: [
-                  // Imágenes existentes
+                  // ImÃ¡genes existentes
                   ..._existingImages.asMap().entries.map((entry) => _ImageTile(
                     imageWidget: Image.network(entry.value, fit: BoxFit.cover, width: 100, height: 100),
                     onRemove: () => _removeExistingImage(entry.key),
                   )),
-                  // Nuevas imágenes locales
+                  // Nuevas imÃ¡genes locales
                   ..._newImages.asMap().entries.map((entry) => _ImageTile(
                     imageWidget: Image.file(entry.value, fit: BoxFit.cover, width: 100, height: 100),
                     onRemove: () => _removeNewImage(entry.key),
                   )),
-                  // Botón añadir
+                  // BotÃ³n aÃ±adir
                   GestureDetector(
                     onTap: _pickImage,
                     child: Container(
@@ -2468,7 +3297,7 @@ class _ProductFormDialogState extends ConsumerState<_ProductFormDialog> {
                         children: [
                           Icon(Icons.add_a_photo, color: Colors.amber, size: 28),
                           SizedBox(height: 4),
-                          Text('Añadir', style: TextStyle(color: Colors.amber, fontSize: 10)),
+                          Text('AÃ±adir', style: TextStyle(color: Colors.amber, fontSize: 10)),
                         ],
                       ),
                     ),
@@ -2479,11 +3308,184 @@ class _ProductFormDialogState extends ConsumerState<_ProductFormDialog> {
             const SizedBox(height: 20),
             
             _FormEditField(label: 'Nombre', controller: _nameController, validator: (v) => v!.isEmpty ? 'Requerido' : null),
-            _FormEditField(label: 'Precio Venta (€)', controller: _priceController, keyboardType: TextInputType.number),
-            _FormEditField(label: 'Precio Coste (€)', controller: _costPriceController, keyboardType: TextInputType.number),
+            _FormEditField(label: 'Precio Venta (â‚¬)', controller: _priceController, keyboardType: TextInputType.number),
+            _FormEditField(label: 'Precio Coste (â‚¬)', controller: _costPriceController, keyboardType: TextInputType.number),
             _FormEditField(label: 'Marca', controller: _brandController),
             _FormEditField(label: 'SKU', controller: _skuController),
             
+            const SizedBox(height: 20),
+
+            // â”€â”€â”€ DESCUENTO â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            const Text('DESCUENTO', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.amber, fontSize: 14)),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey[900],
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('Activar descuento', style: TextStyle(fontWeight: FontWeight.w500)),
+                            Text('El producto aparecerÃ¡ en Ofertas', style: TextStyle(fontSize: 12, color: Colors.grey[400])),
+                          ],
+                        ),
+                      ),
+                      Switch(
+                        value: _hasDiscount,
+                        onChanged: (v) => setState(() => _hasDiscount = v),
+                        activeThumbColor: Colors.red,
+                        activeTrackColor: Colors.red[900],
+                      ),
+                    ],
+                  ),
+                  if (_hasDiscount) ...[
+                    const SizedBox(height: 12),
+                    // Tipo de descuento
+                    Row(
+                      children: [
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () => setState(() => _discountType = 'percentage'),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              decoration: BoxDecoration(
+                                color: _discountType == 'percentage' ? Colors.red[900] : Colors.grey[800],
+                                borderRadius: const BorderRadius.horizontal(left: Radius.circular(8)),
+                                border: Border.all(color: _discountType == 'percentage' ? Colors.red : Colors.grey[700]!),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  'Porcentaje (%)',
+                                  style: TextStyle(
+                                    color: _discountType == 'percentage' ? Colors.white : Colors.grey[400],
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () => setState(() => _discountType = 'fixed'),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              decoration: BoxDecoration(
+                                color: _discountType == 'fixed' ? Colors.red[900] : Colors.grey[800],
+                                borderRadius: const BorderRadius.horizontal(right: Radius.circular(8)),
+                                border: Border.all(color: _discountType == 'fixed' ? Colors.red : Colors.grey[700]!),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  'Fijo (â‚¬)',
+                                  style: TextStyle(
+                                    color: _discountType == 'fixed' ? Colors.white : Colors.grey[400],
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    // Valor del descuento
+                    TextFormField(
+                      controller: _discountValueController,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      onChanged: (_) => setState(() {}),
+                      style: const TextStyle(color: Colors.white),
+                      decoration: InputDecoration(
+                        labelText: _discountType == 'percentage' ? 'Porcentaje (ej: 20)' : 'Cantidad en â‚¬ (ej: 15)',
+                        labelStyle: TextStyle(color: Colors.grey[400]),
+                        filled: true,
+                        fillColor: Colors.grey[850],
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                        suffixText: _discountType == 'percentage' ? '%' : 'â‚¬',
+                        suffixStyle: const TextStyle(color: Colors.amber),
+                      ),
+                    ),
+                    // Vista previa del precio
+                    if (_priceController.text.isNotEmpty && _discountValueController.text.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Builder(builder: (ctx) {
+                        final price = double.tryParse(_priceController.text) ?? 0;
+                        final discountVal = double.tryParse(_discountValueController.text) ?? 0;
+                        double finalPrice;
+                        if (_discountType == 'percentage') {
+                          finalPrice = price * (1 - discountVal / 100);
+                        } else {
+                          finalPrice = price - discountVal;
+                        }
+                        if (finalPrice < 0) finalPrice = 0;
+                        return Row(
+                          children: [
+                            Text('Precio original: â‚¬${price.toStringAsFixed(2)}', style: TextStyle(color: Colors.grey[400], fontSize: 12)),
+                            const SizedBox(width: 8),
+                            const Icon(Icons.arrow_forward, size: 14, color: Colors.grey),
+                            const SizedBox(width: 8),
+                            Text('Precio final: â‚¬${finalPrice.toStringAsFixed(2)}', style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 12)),
+                          ],
+                        );
+                      }),
+                    ],
+                  ],
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            // â”€â”€â”€ TIPO DE COLECCIÃ“N â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            const Text('TIPO DE LANZAMIENTO', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.amber, fontSize: 14)),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                for (final entry in [
+                  ('standard', 'EstÃ¡ndar'),
+                  ('new', 'âœ¨ Nuevo'),
+                  ('restock', 'ðŸ”„ Restock'),
+                ])
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => setState(() => _releaseType = entry.$1),
+                      child: Container(
+                        margin: EdgeInsets.only(right: entry.$1 != 'restock' ? 8 : 0),
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: _releaseType == entry.$1 ? Colors.amber.withOpacity(0.15) : Colors.grey[900],
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: _releaseType == entry.$1 ? Colors.amber : Colors.grey[700]!,
+                          ),
+                        ),
+                        child: Text(
+                          entry.$2,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: _releaseType == entry.$1 ? Colors.amber : Colors.grey[400],
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+
             const SizedBox(height: 20),
             
             // --- Inventario por talla ---
@@ -2560,7 +3562,7 @@ class _ProductFormDialogState extends ConsumerState<_ProductFormDialog> {
   }
 }
 
-// Widget auxiliar para miniatura de imagen con botón eliminar
+// Widget auxiliar para miniatura de imagen con botÃ³n eliminar
 class _ImageTile extends StatelessWidget {
   final Widget imageWidget;
   final VoidCallback onRemove;
@@ -2619,7 +3621,7 @@ class _CategoryFormDialogState extends ConsumerState<_CategoryFormDialog> {
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.category?.name ?? '');
-    _iconController = TextEditingController(text: widget.category?.icon ?? '👟');
+    _iconController = TextEditingController(text: widget.category?.icon ?? 'ðŸ‘Ÿ');
     _orderController = TextEditingController(text: widget.category?.displayOrder.toString() ?? '0');
   }
 
@@ -2655,7 +3657,7 @@ class _CategoryFormDialogState extends ConsumerState<_CategoryFormDialog> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black.withOpacity(0.9),
-      appBar: AppBar(title: const Text('Categoría')),
+      appBar: AppBar(title: const Text('CategorÃ­a')),
       body: Form(
         key: _formKey,
         child: ListView(
@@ -2771,7 +3773,7 @@ class _CouponFormDialogState extends ConsumerState<_CouponFormDialog> {
       if (success && mounted) {
         Navigator.pop(context, true);
       } else if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Error al guardar cupón')));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Error al guardar cupÃ³n')));
       }
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
@@ -2785,7 +3787,7 @@ class _CouponFormDialogState extends ConsumerState<_CouponFormDialog> {
     return Scaffold(
       backgroundColor: Colors.black.withOpacity(0.9),
       appBar: AppBar(
-        title: Text(widget.coupon == null ? 'Nuevo Cupón' : 'Editar Cupón'),
+        title: Text(widget.coupon == null ? 'Nuevo CupÃ³n' : 'Editar CupÃ³n'),
         actions: [
           if (_isSaving)
             const Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator())
@@ -2799,11 +3801,11 @@ class _CouponFormDialogState extends ConsumerState<_CouponFormDialog> {
           padding: const EdgeInsets.all(16),
           children: [
             _FormEditField(
-              label: 'Código',
+              label: 'CÃ³digo',
               controller: _codeController,
               validator: (v) => v == null || v.isEmpty ? 'Requerido' : null,
             ),
-            _FormEditField(label: 'Descripción', controller: _descriptionController),
+            _FormEditField(label: 'DescripciÃ³n', controller: _descriptionController),
             
             const SizedBox(height: 8),
             Text('Tipo de descuento', style: TextStyle(color: Colors.grey[400], fontSize: 12)),
@@ -2843,7 +3845,7 @@ class _CouponFormDialogState extends ConsumerState<_CouponFormDialog> {
                       ),
                       alignment: Alignment.center,
                       child: Text(
-                        'Fijo (€)',
+                        'Fijo (â‚¬)',
                         style: TextStyle(
                           color: _discountType == 'fixed' ? Colors.black : Colors.white,
                           fontWeight: FontWeight.bold,
@@ -2858,29 +3860,29 @@ class _CouponFormDialogState extends ConsumerState<_CouponFormDialog> {
             const SizedBox(height: 16),
             
             _FormEditField(
-              label: _discountType == 'percentage' ? 'Valor (%)' : 'Valor (€)',
+              label: _discountType == 'percentage' ? 'Valor (%)' : 'Valor (â‚¬)',
               controller: _valueController,
               keyboardType: TextInputType.number,
               validator: (v) => v == null || v.isEmpty ? 'Requerido' : null,
             ),
             _FormEditField(
-              label: 'Compra mínima (€)',
+              label: 'Compra mÃ­nima (â‚¬)',
               controller: _minPurchaseController,
               keyboardType: TextInputType.number,
             ),
             _FormEditField(
-              label: 'Usos máximos (vacío = ilimitados)',
+              label: 'Usos mÃ¡ximos (vacÃ­o = ilimitados)',
               controller: _maxUsesController,
               keyboardType: TextInputType.number,
             ),
             _FormEditField(
-              label: 'Usos máximos por usuario',
+              label: 'Usos mÃ¡ximos por usuario',
               controller: _maxUsesPerUserController,
               keyboardType: TextInputType.number,
             ),
             
             const SizedBox(height: 16),
-            // Fecha de expiración
+            // Fecha de expiraciÃ³n
             GestureDetector(
               onTap: _selectExpiryDate,
               child: Container(
@@ -2898,7 +3900,7 @@ class _CouponFormDialogState extends ConsumerState<_CouponFormDialog> {
                       child: Text(
                         _expiresAt != null
                             ? 'Expira: ${DateFormat('dd/MM/yyyy').format(_expiresAt!)}'
-                            : 'Sin fecha de expiración',
+                            : 'Sin fecha de expiraciÃ³n',
                         style: TextStyle(color: _expiresAt != null ? Colors.white : Colors.grey[400]),
                       ),
                     ),
@@ -2926,8 +3928,8 @@ class _CouponFormDialogState extends ConsumerState<_CouponFormDialog> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Cupón activo', style: TextStyle(fontWeight: FontWeight.w500)),
-                        Text('Los clientes pueden usar este cupón', style: TextStyle(fontSize: 12, color: Colors.grey[400])),
+                        const Text('CupÃ³n activo', style: TextStyle(fontWeight: FontWeight.w500)),
+                        Text('Los clientes pueden usar este cupÃ³n', style: TextStyle(fontSize: 12, color: Colors.grey[400])),
                       ],
                     ),
                   ),
@@ -2949,7 +3951,7 @@ class _CouponFormDialogState extends ConsumerState<_CouponFormDialog> {
                 padding: const EdgeInsets.symmetric(vertical: 16),
               ),
               child: Text(
-                widget.coupon == null ? 'CREAR CUPÓN' : 'GUARDAR CAMBIOS',
+                widget.coupon == null ? 'CREAR CUPÃ“N' : 'GUARDAR CAMBIOS',
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
             ),
@@ -3074,7 +4076,7 @@ class _SalesChart extends StatelessWidget {
   Widget build(BuildContext context) {
     // Generate chart data - if no data, use sample days
     final List<BarChartGroupData> barGroups = [];
-    final weekDays = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+    final weekDays = ['Lun', 'Mar', 'MiÃ©', 'Jue', 'Vie', 'SÃ¡b', 'Dom'];
     
     if (salesData.isEmpty) {
       // Sample data for empty state
@@ -3123,7 +4125,7 @@ class _SalesChart extends StatelessWidget {
             tooltipMargin: 8,
             getTooltipItem: (group, groupIndex, rod, rodIndex) {
               return BarTooltipItem(
-                '€${rod.toY.toStringAsFixed(0)}',
+                'â‚¬${rod.toY.toStringAsFixed(0)}',
                 const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
@@ -3159,7 +4161,7 @@ class _SalesChart extends StatelessWidget {
               reservedSize: 40,
               getTitlesWidget: (value, meta) {
                 return Text(
-                  '€${value.toInt()}',
+                  'â‚¬${value.toInt()}',
                   style: TextStyle(color: Colors.grey[500], fontSize: 10),
                 );
               },
@@ -3195,4 +4197,7 @@ class _SalesChart extends StatelessWidget {
     return maxVal == 0 ? 400 : maxVal * 1.2;
   }
 }
+
+
+
 
