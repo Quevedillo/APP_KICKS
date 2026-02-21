@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../data/models/product.dart';
+import '../../utils/vat_helper.dart';
 
 class ProductCard extends StatelessWidget {
   final Product product;
@@ -14,9 +15,9 @@ class ProductCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final currencyFormat = NumberFormat.currency(locale: 'es_ES', symbol: '€', decimalDigits: 0);
 
-    // Use effective (discounted) price as main price
-    final displayPrice = currencyFormat.format(product.effectivePrice / 100);
-    final originalPrice = currencyFormat.format(product.price / 100);
+    // Prices WITH IVA for user display
+    final displayPrice = currencyFormat.format(product.effectivePriceWithVat / 100);
+    final originalPrice = currencyFormat.format(product.priceWithVat / 100);
 
     // Contar tallas disponibles
     final availableSizesCount = product.sizesAvailable.entries
@@ -211,7 +212,7 @@ class ProductCard extends StatelessWidget {
                       ] else if (product.comparePrice != null && product.comparePrice! > product.price) ...[
                         const SizedBox(width: 6),
                         Text(
-                          currencyFormat.format(product.comparePrice! / 100),
+                        currencyFormat.format(product.comparePrice != null ? VatHelper.priceWithVat(product.comparePrice!) / 100 : 0),
                           style: const TextStyle(
                             color: Colors.grey,
                             fontSize: 12,

@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../../logic/providers.dart';
 import '../../../data/services/stripe_service.dart';
 import '../../../data/models/discount_code.dart';
+import '../../../utils/vat_helper.dart';
 
 class CheckoutScreen extends ConsumerStatefulWidget {
   const CheckoutScreen({super.key});
@@ -133,9 +134,11 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen>
     });
   }
 
+  /// Total final CON IVA 21%, menos descuento
   int get _finalTotal {
-    final cartTotal = ref.read(cartTotalProvider);
-    return cartTotal - _discountAmount;
+    final cartTotal = ref.read(cartTotalProvider); // base sin IVA
+    final withVat = VatHelper.priceWithVat(cartTotal);
+    return withVat - _discountAmount;
   }
 
   Future<void> _processPayment() async {
@@ -245,17 +248,18 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen>
           if (order != null) {
             final emailRepo = ref.read(emailRepositoryProvider);
             
-            // Email al cliente
+            // Email al cliente — precios CON IVA para el usuario
             await emailRepo.sendOrderConfirmation(
               userEmail,
               order.displayId,
               finalAmount / 100,
               cartItems.map((item) => {
                 'name': item.product.name,
-                'brand': item.product.brand,
+                'brand': item.product.brand ?? '',
                 'size': item.size,
                 'quantity': item.quantity,
-                'price': item.product.price / 100,
+                'price': VatHelper.priceWithVat(item.product.effectivePrice) / 100,
+                'image': item.product.images.isNotEmpty ? item.product.images.first : '',
               }).toList(),
             );
 
@@ -450,14 +454,40 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen>
                     ...cartItems.map((item) => _buildOrderItem(item, currencyFormat)),
                     const Divider(height: 24, color: Colors.grey),
                     
-                    // Subtotal
+                    // Base (sin IVA)
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('Subtotal:', style: TextStyle(color: Colors.grey)),
+                        const Text('Subtotal (sin IVA):', style: TextStyle(color: Colors.grey)),
                         Text(
-                          currencyFormat.format(cartTotal / 100),
-                          style: const TextStyle(fontSize: 16),
+                          VatHelper.formatEur(cartTotal),
+                          style: const TextStyle(fontSize: 14, color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    
+                    // IVA 21%
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('IVA (${VatHelper.kVatPercent}%):', style: const TextStyle(color: Colors.grey)),
+                        Text(
+                          VatHelper.formatEur(VatHelper.vatAmount(cartTotal)),
+                          style: const TextStyle(fontSize: 14, color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    
+                    // Subtotal con IVA
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Subtotal (IVA incl.):', style: TextStyle(color: Colors.white70)),
+                        Text(
+                          VatHelper.formatEur(VatHelper.priceWithVat(cartTotal)),
+                          style: const TextStyle(fontSize: 15),
                         ),
                       ],
                     ),
@@ -479,7 +509,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen>
                             ],
                           ),
                           Text(
-                            '-${currencyFormat.format(_discountAmount / 100)}',
+                            '-${VatHelper.formatEur(_discountAmount)}',
                             style: TextStyle(
                               fontSize: 16,
                               color: Colors.green[400],
@@ -491,12 +521,14 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen>
                     ],
                     
                     const SizedBox(height: 12),
+                    const Divider(height: 1, color: Colors.grey),
+                    const SizedBox(height: 12),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('TOTAL:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                        const Text('TOTAL:', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                         Text(
-                          currencyFormat.format(_finalTotal / 100),
+                          VatHelper.formatEur(_finalTotal),
                           style: TextStyle(
                             fontSize: 28,
                             fontWeight: FontWeight.bold,

@@ -252,13 +252,32 @@ class EmailService {
     double totalAmount,
     List<Map<String, dynamic>> items,
   ) {
+    // totalAmount ya viene CON IVA.
+    // Calculamos base e IVA a partir del total
+    final baseAmount = totalAmount / 1.21;
+    final ivaAmount = totalAmount - baseAmount;
+
     String itemsHtml = items.map((item) {
+      final price = item['price'] is num
+          ? (item['price'] as num).toDouble()
+          : double.tryParse(item['price'].toString()) ?? 0.0;
+      final qty = item['quantity'] ?? 1;
+      final lineTotal = price * (qty is num ? qty.toInt() : 1);
+      final imageUrl = item['image'] ?? '';
+      final imageTag = imageUrl.toString().isNotEmpty
+          ? '<img src="$imageUrl" width="60" height="60" alt="${item['name']}" style="border-radius:8px;object-fit:cover;">'
+          : '<div style="width:60px;height:60px;background:#333;border-radius:8px;"></div>';
+
       return '''
         <tr>
-          <td>${item['name']}</td>
-          <td>${item['size']}</td>
-          <td>${item['quantity']}</td>
-          <td>\$${item['price']}</td>
+          <td style="padding:12px 8px;border-bottom:1px solid #2a2a2a;">$imageTag</td>
+          <td style="padding:12px 8px;border-bottom:1px solid #2a2a2a;color:#fff;">
+            <strong>${item['name']}</strong><br>
+            <span style="color:#999;font-size:12px;">${item['brand'] ?? ''} · Talla ${item['size']}</span>
+          </td>
+          <td style="padding:12px 8px;border-bottom:1px solid #2a2a2a;text-align:center;color:#ccc;">$qty</td>
+          <td style="padding:12px 8px;border-bottom:1px solid #2a2a2a;text-align:right;color:#FFD700;font-weight:bold;">€${price.toStringAsFixed(2)}</td>
+          <td style="padding:12px 8px;border-bottom:1px solid #2a2a2a;text-align:right;color:#fff;">€${lineTotal.toStringAsFixed(2)}</td>
         </tr>
       ''';
     }).join();
@@ -268,43 +287,73 @@ class EmailService {
       <html>
       <head>
         <meta charset="UTF-8">
-        <style>
-          body { font-family: Arial, sans-serif; color: #333; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background: #1a1a1a; color: #fff; padding: 20px; text-align: center; }
-          table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-          th, td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
-          th { background: #f0f0f0; }
-          .total { font-size: 18px; font-weight: bold; color: #FFD700; }
-          .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; }
-        </style>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
       </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1>📦 Pedido Confirmado</h1>
-            <p>Pedido #$orderId</p>
+      <body style="margin:0;padding:0;background:#0a0a0a;font-family:'Helvetica Neue',Arial,sans-serif;">
+        <div style="max-width:600px;margin:0 auto;background:#121212;">
+          <!-- Header -->
+          <div style="background:linear-gradient(135deg,#1a1a1a 0%,#2a2a2a 100%);padding:30px;text-align:center;border-bottom:3px solid #FFD700;">
+            <h1 style="margin:0;color:#FFD700;font-size:24px;letter-spacing:2px;">KICKSPREMIUM</h1>
+            <p style="margin:8px 0 0;color:#ccc;font-size:13px;">FACTURA DE COMPRA</p>
           </div>
-          <div style="padding: 20px; background: #f9f9f9;">
-            <p>¡Tu pedido ha sido confirmado con éxito!</p>
-            <table>
+
+          <!-- Order ID badge -->
+          <div style="text-align:center;padding:20px 0 10px;">
+            <span style="background:#FFD700;color:#000;padding:6px 18px;border-radius:20px;font-size:13px;font-weight:bold;">
+              Pedido #$orderId
+            </span>
+          </div>
+
+          <div style="padding:20px 24px;">
+            <p style="color:#ccc;font-size:14px;">¡Tu pedido ha sido confirmado con éxito! A continuación, el detalle de tu compra:</p>
+
+            <!-- Items table -->
+            <table style="width:100%;border-collapse:collapse;margin:16px 0;">
               <thead>
-                <tr>
-                  <th>Producto</th>
-                  <th>Talla</th>
-                  <th>Cantidad</th>
-                  <th>Precio</th>
+                <tr style="background:#1e1e1e;">
+                  <th style="padding:10px 8px;text-align:left;color:#999;font-size:11px;text-transform:uppercase;letter-spacing:1px;width:60px;"></th>
+                  <th style="padding:10px 8px;text-align:left;color:#999;font-size:11px;text-transform:uppercase;letter-spacing:1px;">Producto</th>
+                  <th style="padding:10px 8px;text-align:center;color:#999;font-size:11px;text-transform:uppercase;letter-spacing:1px;">Ud.</th>
+                  <th style="padding:10px 8px;text-align:right;color:#999;font-size:11px;text-transform:uppercase;letter-spacing:1px;">Precio</th>
+                  <th style="padding:10px 8px;text-align:right;color:#999;font-size:11px;text-transform:uppercase;letter-spacing:1px;">Total</th>
                 </tr>
               </thead>
               <tbody>
                 $itemsHtml
               </tbody>
             </table>
-            <p style="text-align: right;" class="total">Total: \$$totalAmount</p>
-            <p>Recibirás actualizaciones sobre tu envío en los próximos días.</p>
+
+            <!-- IVA breakdown -->
+            <div style="background:#1a1a1a;border-radius:10px;padding:16px;margin-top:16px;">
+              <table style="width:100%;border-collapse:collapse;">
+                <tr>
+                  <td style="padding:6px 0;color:#999;font-size:13px;">Subtotal (sin IVA)</td>
+                  <td style="padding:6px 0;text-align:right;color:#ccc;font-size:13px;">€${baseAmount.toStringAsFixed(2)}</td>
+                </tr>
+                <tr>
+                  <td style="padding:6px 0;color:#999;font-size:13px;">IVA (21%)</td>
+                  <td style="padding:6px 0;text-align:right;color:#ccc;font-size:13px;">€${ivaAmount.toStringAsFixed(2)}</td>
+                </tr>
+                <tr>
+                  <td style="padding:6px 0;color:#999;font-size:13px;">Envío</td>
+                  <td style="padding:6px 0;text-align:right;color:#4CAF50;font-size:13px;">GRATIS</td>
+                </tr>
+                <tr style="border-top:2px solid #333;">
+                  <td style="padding:12px 0 0;color:#fff;font-size:18px;font-weight:bold;">TOTAL</td>
+                  <td style="padding:12px 0 0;text-align:right;color:#FFD700;font-size:22px;font-weight:bold;">€${totalAmount.toStringAsFixed(2)}</td>
+                </tr>
+              </table>
+            </div>
+
+            <p style="color:#999;font-size:13px;margin-top:20px;line-height:1.5;">
+              Recibirás actualizaciones sobre el estado de tu envío. Si tienes alguna pregunta, no dudes en contactarnos.
+            </p>
           </div>
-          <div class="footer">
-            <p>© 2026 KicksPremium</p>
+
+          <!-- Footer -->
+          <div style="text-align:center;padding:20px;border-top:1px solid #2a2a2a;color:#666;font-size:11px;">
+            <p style="margin:0;">¿Dudas? Escríbenos a <a href="mailto:support@kickspremium.com" style="color:#FFD700;">support@kickspremium.com</a></p>
+            <p style="margin:8px 0 0;">© 2026 KicksPremium. Todos los derechos reservados.</p>
           </div>
         </div>
       </body>
@@ -312,19 +361,27 @@ class EmailService {
     ''';
   }
 
+
   String _getAdminOrderNotificationTemplate(
     String orderId,
     String customerEmail,
     double totalAmount,
     List<Map<String, dynamic>> items,
   ) {
+    final baseAmount = totalAmount / 1.21;
+    final ivaAmount = totalAmount - baseAmount;
+
     String itemsHtml = items.map((item) {
+      final price = item['price'] is num
+          ? (item['price'] as num).toDouble()
+          : double.tryParse(item['price'].toString()) ?? 0.0;
+      final qty = item['quantity'] ?? 1;
       return '''
         <tr>
-          <td>${item['name']}</td>
-          <td>${item['size']}</td>
-          <td>${item['quantity']}</td>
-          <td>\$${item['price']}</td>
+          <td style="padding:8px;border-bottom:1px solid #ddd;">${item['name']}</td>
+          <td style="padding:8px;border-bottom:1px solid #ddd;text-align:center;">${item['size']}</td>
+          <td style="padding:8px;border-bottom:1px solid #ddd;text-align:center;">$qty</td>
+          <td style="padding:8px;border-bottom:1px solid #ddd;text-align:right;">€${price.toStringAsFixed(2)}</td>
         </tr>
       ''';
     }).join();
@@ -332,45 +389,49 @@ class EmailService {
     return '''
       <!DOCTYPE html>
       <html>
-      <head>
-        <meta charset="UTF-8">
-        <style>
-          body { font-family: Arial, sans-serif; color: #333; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background: #ff6b6b; color: #fff; padding: 20px; text-align: center; }
-          table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-          th, td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
-          th { background: #f0f0f0; }
-          .alert { background: #fff3cd; padding: 15px; border-left: 4px solid #ffc107; margin: 10px 0; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1>🔔 NUEVO PEDIDO RECIBIDO</h1>
+      <head><meta charset="UTF-8"></head>
+      <body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;">
+        <div style="max-width:600px;margin:0 auto;background:#fff;">
+          <div style="background:#ff6b6b;color:#fff;padding:24px;text-align:center;">
+            <h1 style="margin:0;font-size:20px;">🔔 NUEVO PEDIDO RECIBIDO</h1>
           </div>
-          <div style="padding: 20px; background: #f9f9f9;">
-            <div class="alert">
+          <div style="padding:20px;">
+            <div style="background:#fff3cd;padding:14px;border-left:4px solid #ffc107;margin-bottom:16px;border-radius:4px;">
               <strong>¡Tienes un nuevo pedido!</strong>
             </div>
-            <p><strong>Número de Pedido:</strong> $orderId</p>
-            <p><strong>Email del Cliente:</strong> $customerEmail</p>
-            <p><strong>Monto Total:</strong> \$$totalAmount</p>
-            <h3>Artículos:</h3>
-            <table>
+            <p><strong>Pedido:</strong> #$orderId</p>
+            <p><strong>Email:</strong> $customerEmail</p>
+
+            <table style="width:100%;border-collapse:collapse;margin:16px 0;">
               <thead>
-                <tr>
-                  <th>Producto</th>
-                  <th>Talla</th>
-                  <th>Cantidad</th>
-                  <th>Precio</th>
+                <tr style="background:#f0f0f0;">
+                  <th style="padding:8px;text-align:left;">Producto</th>
+                  <th style="padding:8px;text-align:center;">Talla</th>
+                  <th style="padding:8px;text-align:center;">Ud.</th>
+                  <th style="padding:8px;text-align:right;">Precio</th>
                 </tr>
               </thead>
-              <tbody>
-                $itemsHtml
-              </tbody>
+              <tbody>$itemsHtml</tbody>
             </table>
-            <p>Por favor, procesa este pedido lo antes posible.</p>
+
+            <div style="background:#f9f9f9;border-radius:8px;padding:14px;margin-top:12px;">
+              <table style="width:100%;border-collapse:collapse;">
+                <tr>
+                  <td style="padding:4px 0;color:#666;font-size:13px;">Base (sin IVA)</td>
+                  <td style="padding:4px 0;text-align:right;font-size:13px;">€${baseAmount.toStringAsFixed(2)}</td>
+                </tr>
+                <tr>
+                  <td style="padding:4px 0;color:#666;font-size:13px;">IVA (21%)</td>
+                  <td style="padding:4px 0;text-align:right;font-size:13px;">€${ivaAmount.toStringAsFixed(2)}</td>
+                </tr>
+                <tr style="border-top:2px solid #ddd;">
+                  <td style="padding:8px 0 0;font-size:16px;font-weight:bold;">TOTAL</td>
+                  <td style="padding:8px 0 0;text-align:right;font-size:18px;font-weight:bold;color:#28a745;">€${totalAmount.toStringAsFixed(2)}</td>
+                </tr>
+              </table>
+            </div>
+
+            <p style="margin-top:16px;color:#666;font-size:13px;">Procesa este pedido lo antes posible.</p>
           </div>
         </div>
       </body>
@@ -551,26 +612,37 @@ class EmailService {
     List<Map<String, dynamic>> items,
     String? reason,
   ) {
+    final baseRefund = refundAmount / 1.21;
+    final ivaRefund = refundAmount - baseRefund;
+
     String itemsHtml = items.map((item) {
       final price = item['price'] is num ? (item['price'] as num).toStringAsFixed(2) : item['price'].toString();
       final qty = item['quantity'] ?? 1;
       final total = (item['price'] is num ? (item['price'] as num).toDouble() : 0.0) * (qty is num ? qty.toInt() : 1);
+      final imageUrl = item['image'] ?? '';
+      final imageTag = imageUrl.toString().isNotEmpty
+          ? '<img src="$imageUrl" width="50" height="50" alt="${item['name']}" style="border-radius:6px;object-fit:cover;">'
+          : '<div style="width:50px;height:50px;background:#333;border-radius:6px;"></div>';
+
       return '''
         <tr>
-          <td style="padding: 10px; border-bottom: 1px solid #ddd;">${item['name']}</td>
-          <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: center;">${item['size'] ?? '-'}</td>
-          <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: center;">$qty</td>
-          <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: right;">€$price</td>
-          <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: right;">€${total.toStringAsFixed(2)}</td>
+          <td style="padding:10px 8px;border-bottom:1px solid #2a2a2a;">$imageTag</td>
+          <td style="padding:10px 8px;border-bottom:1px solid #2a2a2a;color:#fff;">
+            <strong>${item['name']}</strong><br>
+            <span style="color:#999;font-size:12px;">Talla ${item['size'] ?? '-'}</span>
+          </td>
+          <td style="padding:10px 8px;border-bottom:1px solid #2a2a2a;text-align:center;color:#ccc;">$qty</td>
+          <td style="padding:10px 8px;border-bottom:1px solid #2a2a2a;text-align:right;color:#ccc;">€$price</td>
+          <td style="padding:10px 8px;border-bottom:1px solid #2a2a2a;text-align:right;color:#fff;">€${total.toStringAsFixed(2)}</td>
         </tr>
       ''';
     }).join();
 
     String reasonSection = reason != null && reason.isNotEmpty
         ? '''
-          <div style="background: #fff3cd; padding: 15px; border-left: 4px solid #ffc107; margin: 20px 0; border-radius: 4px;">
-            <p style="margin: 0;"><strong>Motivo de cancelación:</strong></p>
-            <p style="margin: 5px 0 0 0;">$reason</p>
+          <div style="background:#3a2a00;padding:14px;border-left:4px solid #ffc107;margin:16px 0;border-radius:4px;">
+            <p style="margin:0;color:#FFD700;font-size:13px;"><strong>Motivo de cancelación:</strong></p>
+            <p style="margin:5px 0 0;color:#ccc;font-size:13px;">$reason</p>
           </div>
         '''
         : '';
@@ -580,66 +652,80 @@ class EmailService {
       <html>
       <head>
         <meta charset="UTF-8">
-        <style>
-          body { font-family: Arial, sans-serif; color: #333; margin: 0; padding: 0; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background: #1a1a1a; color: #fff; padding: 25px; text-align: center; }
-          .header h1 { margin: 0; font-size: 22px; }
-          .header p { margin: 5px 0 0; color: #ccc; }
-          table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-          th { background: #f0f0f0; padding: 10px; text-align: left; font-weight: bold; }
-          .total-row { font-size: 18px; font-weight: bold; color: #dc3545; }
-          .refund-box { background: #d4edda; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0; }
-          .refund-amount { font-size: 28px; font-weight: bold; color: #28a745; }
-          .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; border-top: 1px solid #eee; margin-top: 30px; }
-        </style>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
       </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1>FACTURA DE CANCELACIÓN</h1>
-            <p>Pedido #$orderId</p>
+      <body style="margin:0;padding:0;background:#0a0a0a;font-family:'Helvetica Neue',Arial,sans-serif;">
+        <div style="max-width:600px;margin:0 auto;background:#121212;">
+          <!-- Header -->
+          <div style="background:linear-gradient(135deg,#1a1a1a 0%,#2a2a2a 100%);padding:30px;text-align:center;border-bottom:3px solid #dc3545;">
+            <h1 style="margin:0;color:#dc3545;font-size:22px;letter-spacing:2px;">KICKSPREMIUM</h1>
+            <p style="margin:8px 0 0;color:#ccc;font-size:13px;">FACTURA DE CANCELACIÓN</p>
           </div>
-          <div style="padding: 20px; background: #f9f9f9;">
-            <p>Hola <strong>$customerName</strong>,</p>
-            <p>Tu pedido <strong>#$orderId</strong> ha sido cancelado y se ha procesado el reembolso correspondiente.</p>
+
+          <!-- Order ID -->
+          <div style="text-align:center;padding:20px 0 10px;">
+            <span style="background:#dc3545;color:#fff;padding:6px 18px;border-radius:20px;font-size:13px;font-weight:bold;">
+              Pedido #$orderId
+            </span>
+          </div>
+
+          <div style="padding:20px 24px;">
+            <p style="color:#ccc;font-size:14px;">Hola <strong style="color:#fff;">$customerName</strong>,</p>
+            <p style="color:#ccc;font-size:14px;">Tu pedido <strong style="color:#fff;">#$orderId</strong> ha sido cancelado y se ha procesado el reembolso correspondiente.</p>
             
             $reasonSection
             
-            <h3>Detalle de artículos reembolsados:</h3>
-            <table>
+            <p style="color:#999;font-size:12px;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Artículos reembolsados</p>
+            <table style="width:100%;border-collapse:collapse;margin:0 0 16px;">
               <thead>
-                <tr>
-                  <th>Producto</th>
-                  <th style="text-align: center;">Talla</th>
-                  <th style="text-align: center;">Cantidad</th>
-                  <th style="text-align: right;">Precio</th>
-                  <th style="text-align: right;">Total</th>
+                <tr style="background:#1e1e1e;">
+                  <th style="padding:8px;width:50px;"></th>
+                  <th style="padding:8px;text-align:left;color:#999;font-size:11px;text-transform:uppercase;">Producto</th>
+                  <th style="padding:8px;text-align:center;color:#999;font-size:11px;text-transform:uppercase;">Ud.</th>
+                  <th style="padding:8px;text-align:right;color:#999;font-size:11px;text-transform:uppercase;">Precio</th>
+                  <th style="padding:8px;text-align:right;color:#999;font-size:11px;text-transform:uppercase;">Total</th>
                 </tr>
               </thead>
               <tbody>
                 $itemsHtml
               </tbody>
             </table>
+
+            <!-- IVA breakdown -->
+            <div style="background:#1a1a1a;border-radius:10px;padding:16px;margin-bottom:16px;">
+              <table style="width:100%;border-collapse:collapse;">
+                <tr>
+                  <td style="padding:4px 0;color:#999;font-size:13px;">Base (sin IVA)</td>
+                  <td style="padding:4px 0;text-align:right;color:#ccc;font-size:13px;">€${baseRefund.toStringAsFixed(2)}</td>
+                </tr>
+                <tr>
+                  <td style="padding:4px 0;color:#999;font-size:13px;">IVA (21%)</td>
+                  <td style="padding:4px 0;text-align:right;color:#ccc;font-size:13px;">€${ivaRefund.toStringAsFixed(2)}</td>
+                </tr>
+              </table>
+            </div>
             
-            <div class="refund-box">
-              <p style="margin: 0 0 5px; font-size: 14px; color: #666;">IMPORTE REEMBOLSADO</p>
-              <p class="refund-amount" style="margin: 0;">€${refundAmount.toStringAsFixed(2)}</p>
-              <p style="margin: 10px 0 0; font-size: 13px; color: #666;">
-                El reembolso se reflejará en tu método de pago original en un plazo de 5-10 días hábiles.
+            <!-- Refund box -->
+            <div style="background:linear-gradient(135deg,#1b3a26 0%,#1e4d2b 100%);padding:20px;border-radius:10px;text-align:center;margin:16px 0;">
+              <p style="margin:0 0 5px;font-size:12px;color:#8fc9a0;text-transform:uppercase;letter-spacing:1px;">IMPORTE REEMBOLSADO</p>
+              <p style="margin:0;font-size:30px;font-weight:bold;color:#4CAF50;">€${refundAmount.toStringAsFixed(2)}</p>
+              <p style="margin:10px 0 0;font-size:12px;color:#8fc9a0;">
+                El reembolso se reflejará en tu método de pago original en 5-10 días hábiles.
               </p>
             </div>
             
-            <div style="background: #e8f4fd; padding: 15px; border-radius: 8px; margin: 20px 0;">
-              <p style="margin: 0; font-size: 13px;">
+            <div style="background:#1a2332;padding:14px;border-radius:8px;margin:16px 0;">
+              <p style="margin:0;font-size:12px;color:#7fb3d8;">
                 <strong>📌 Nota:</strong> Este email sirve como comprobante oficial de tu cancelación y reembolso. 
                 Guárdalo para tus registros.
               </p>
             </div>
           </div>
-          <div class="footer">
-            <p>¿Tienes alguna pregunta? Contáctanos en support@kickspremium.com</p>
-            <p>© 2026 KicksPremium. Todos los derechos reservados.</p>
+
+          <!-- Footer -->
+          <div style="text-align:center;padding:20px;border-top:1px solid #2a2a2a;color:#666;font-size:11px;">
+            <p style="margin:0;">¿Dudas? Escríbenos a <a href="mailto:support@kickspremium.com" style="color:#FFD700;">support@kickspremium.com</a></p>
+            <p style="margin:8px 0 0;">© 2026 KicksPremium. Todos los derechos reservados.</p>
           </div>
         </div>
       </body>

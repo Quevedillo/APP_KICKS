@@ -1,4 +1,6 @@
 
+import '../../utils/vat_helper.dart';
+
 class Product {
   final String id;
   final String name;
@@ -75,6 +77,15 @@ class Product {
       return discounted < 0 ? 0 : discounted;
     }
   }
+
+  /// Precio base CON IVA (lo que ve el usuario)
+  int get priceWithVat => VatHelper.priceWithVat(price);
+
+  /// Precio efectivo (con descuento) CON IVA
+  int get effectivePriceWithVat => VatHelper.priceWithVat(effectivePrice);
+
+  /// Importe del IVA sobre el precio efectivo
+  int get vatAmountOnEffective => VatHelper.vatAmount(effectivePrice);
 
   /// Human-readable discount badge label: "-20%" or "-10€"
   String get discountLabel {

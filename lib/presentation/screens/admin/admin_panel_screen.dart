@@ -2149,6 +2149,11 @@ class _AdminFinanceMobileState extends ConsumerState<AdminFinanceMobile> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text('Finanzas', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 4),
+              Text(
+                'Todos los importes se muestran sin IVA (21%)',
+                style: TextStyle(fontSize: 12, color: Colors.grey[500], fontStyle: FontStyle.italic),
+              ),
               const SizedBox(height: 12),
 
               // Period selector
