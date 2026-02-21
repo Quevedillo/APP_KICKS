@@ -148,7 +148,7 @@ class Order {
       cancelledReason: json['cancelled_reason'] as String?,
       items: items,
       shippingName: json['shipping_name'] as String?,
-      shippingEmail: json['shipping_email'] as String?,
+      shippingEmail: (json['billing_email'] ?? json['shipping_email']) as String?,
       shippingPhone: json['shipping_phone'] as String?,
       shippingAddress: _parseShippingAddress(json['shipping_address']),
       createdAt: json['created_at'] != null 

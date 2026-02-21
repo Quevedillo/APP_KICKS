@@ -28,12 +28,12 @@ class AdminPanelScreen extends ConsumerStatefulWidget {
 class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
 
   final List<_AdminSection> _sections = [
-    _AdminSection(icon: Icons.dashboard, label: 'Dash'),
+    _AdminSection(icon: Icons.dashboard, label: 'Dashboard'),
     _AdminSection(icon: Icons.shopping_bag, label: 'Pedidos'),
-    _AdminSection(icon: Icons.inventory, label: 'Prod'),
-    _AdminSection(icon: Icons.category, label: 'Cat'),
+    _AdminSection(icon: Icons.inventory, label: 'Productos'),
+    _AdminSection(icon: Icons.category, label: 'Categorías'),
     _AdminSection(icon: Icons.local_offer, label: 'Cupones'),
-    _AdminSection(icon: Icons.people, label: 'Users'),
+    _AdminSection(icon: Icons.people, label: 'Usuarios'),
     _AdminSection(icon: Icons.bar_chart, label: 'Finanzas'),
     _AdminSection(icon: Icons.settings, label: 'Config'),
   ];
@@ -44,18 +44,66 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
 
     return Scaffold(
       backgroundColor: Colors.black,
-      appBar: AppBar(
-        backgroundColor: Colors.black,
-        title: const Text('KICKSPREMIUM ADMIN', style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.2, fontSize: 16)),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.exit_to_app, color: Colors.red),
-            onPressed: _showLogoutDialog,
+      appBar: _buildAppBar(),
+      body: _buildMainContent(selectedIndex),
+      bottomNavigationBar: _buildBottomNav(selectedIndex),
+    );
+  }
+
+  PreferredSizeWidget _buildAppBar() {
+    return AppBar(
+      backgroundColor: Colors.black,
+      elevation: 0,
+      title: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Colors.blue.shade700, Colors.blue.shade500],
+              ),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(Icons.admin_panel_settings, color: Colors.white, size: 20),
+          ),
+          const SizedBox(width: 12),
+          const Text(
+            'Admin Panel',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              letterSpacing: 0.5,
+              fontSize: 18,
+              color: Colors.white,
+            ),
           ),
         ],
       ),
-      body: _buildMainContent(selectedIndex),
-      bottomNavigationBar: _buildBottomNav(selectedIndex),
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.refresh, color: Colors.blue),
+          tooltip: 'Actualizar datos',
+          onPressed: _refreshAllData,
+        ),
+        IconButton(
+          icon: const Icon(Icons.exit_to_app, color: Colors.red),
+          tooltip: 'Cerrar sesión',
+          onPressed: _showLogoutDialog,
+        ),
+      ],
+      bottom: PreferredSize(
+        preferredSize: const Size.fromHeight(1),
+        child: Container(
+          height: 1,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                Colors.blue.shade700,
+                Colors.transparent,
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -85,57 +133,88 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
   Widget _buildBottomNav(int selectedIndex) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.grey[900],
-        border: Border(top: BorderSide(color: Colors.grey[800]!, width: 0.5)),
+        color: Colors.black,
+        border: Border(
+          top: BorderSide(
+            color: Colors.blue.withValues(alpha: 0.3),
+            width: 1,
+          ),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.blue.withValues(alpha: 0.1),
+            blurRadius: 12,
+            offset: const Offset(0, -2),
+          ),
+        ],
       ),
       child: SafeArea(
         child: SizedBox(
-          height: 56,
-          child: Row(
-            children: List.generate(_sections.length, (index) {
-              final section = _sections[index];
-              final isSelected = selectedIndex == index;
+          height: 70,
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: List.generate(_sections.length, (index) {
+                final section = _sections[index];
+                final isSelected = selectedIndex == index;
 
-              return Expanded(
-                child: GestureDetector(
-                  onTap: () => ref.read(adminSelectedSectionProvider.notifier).setSection(index),
-                  behavior: HitTestBehavior.opaque,
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    curve: Curves.easeInOut,
-                    margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 6),
+                return GestureDetector(
+                  onTap: () {
+                    ref.read(adminSelectedSectionProvider.notifier).setSection(index);
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                     decoration: BoxDecoration(
-                      color: isSelected ? Colors.amber[700] : Colors.transparent,
-                      borderRadius: BorderRadius.circular(10),
+                      border: Border(
+                        bottom: BorderSide(
+                          color: isSelected ? Colors.blue : Colors.transparent,
+                          width: 2.5,
+                        ),
+                      ),
                     ),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
-                      mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
                           section.icon,
-                          color: isSelected ? Colors.black : Colors.grey[400],
-                          size: 18,
+                          color: isSelected ? Colors.blue : Colors.grey.shade600,
+                          size: 22,
                         ),
-                        const SizedBox(height: 1),
+                        const SizedBox(height: 4),
                         Text(
                           section.label,
                           style: TextStyle(
-                            color: isSelected ? Colors.black : Colors.grey[400],
-                            fontSize: 8,
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                            color: isSelected ? Colors.blue : Colors.grey.shade600,
+                            fontSize: 10,
+                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                            letterSpacing: 0.3,
                           ),
-                          overflow: TextOverflow.ellipsis,
-                          maxLines: 1,
                         ),
                       ],
                     ),
                   ),
-                ),
-              );
-            }),
+                );
+              }),
+            ),
           ),
         ),
+      ),
+    );
+  }
+
+  void _refreshAllData() {
+    ref.invalidate(adminDashboardStatsProvider);
+    ref.invalidate(adminAllOrdersProvider);
+    ref.invalidate(adminAllProductsProvider);
+    ref.invalidate(adminAllCategoriesProvider);
+    ref.invalidate(adminAllUsersProvider);
+    ref.invalidate(adminAllDiscountCodesProvider);
+    ref.invalidate(adminOrderStatsProvider);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Datos sincronizados con el servidor'),
+        duration: Duration(seconds: 2),
       ),
     );
   }
@@ -145,8 +224,11 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: Colors.grey[900],
-        title: const Text('Cerrar SesiÃ³n'),
-        content: const Text('Â¿Salir del panel de administrador?'),
+        title: const Text('Cerrar sesión', style: TextStyle(color: Colors.white)),
+        content: const Text(
+          '¿Deseas cerrar la sesión?',
+          style: TextStyle(color: Colors.grey),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -154,10 +236,10 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
           ),
           TextButton(
             onPressed: () {
-              Navigator.pop(context);
+              ref.read(supabaseClientProvider).auth.signOut();
               context.go('/');
             },
-            child: const Text('Salir', style: TextStyle(color: Colors.red)),
+            child: const Text('Cerrar sesión', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -178,10 +260,23 @@ class AdminDashboardMobile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final statsAsync = ref.watch(adminDashboardStatsProvider);
+    final orderStatsAsync = ref.watch(adminOrderStatsProvider);
 
     return statsAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (err, stack) => Center(child: Text('Error: $err')),
+      error: (err, stack) => Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text('Error: $err', style: const TextStyle(color: Colors.red)),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () => ref.invalidate(adminDashboardStatsProvider),
+              child: const Text('Reintentar'),
+            ),
+          ],
+        ),
+      ),
       data: (stats) => SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -193,14 +288,13 @@ class AdminDashboardMobile extends ConsumerWidget {
             ),
             const SizedBox(height: 16),
             
-            // Stats Grid 2x2
+            // Stats Grid 2x3
             GridView.count(
               crossAxisCount: 2,
               crossAxisSpacing: 12,
               mainAxisSpacing: 12,
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              childAspectRatio: 1.3,
               children: [
                 _StatCard(
                   title: 'Pedidos Hoy', 
@@ -209,26 +303,73 @@ class AdminDashboardMobile extends ConsumerWidget {
                   color: Colors.blue
                 ),
                 _StatCard(
-                  title: 'Ingresos', 
-                  value: 'â‚¬${stats['revenueToday'].toStringAsFixed(2)}', 
+                  title: 'Ingresos Hoy', 
+                  value: '\u20ac${(stats['revenueToday'] as num).toStringAsFixed(2)}', 
                   icon: Icons.euro, 
                   color: Colors.green
                 ),
                 _StatCard(
-                  title: 'Usuarios Nv.', 
+                  title: 'Usuarios Nuevos', 
                   value: stats['newUsersToday'].toString(), 
                   icon: Icons.people, 
                   color: Colors.purple
                 ),
                 _StatCard(
-                  title: 'Prod. Totales', 
+                  title: 'Productos', 
                   value: stats['totalProducts'].toString(), 
                   icon: Icons.inventory, 
                   color: Colors.orange
                 ),
+                _StatCard(
+                  title: 'Stock Bajo',
+                  value: stats['lowStockProducts'].toString(),
+                  icon: Icons.warning,
+                  color: Colors.red,
+                ),
+                _StatCard(
+                  title: 'Por Enviar',
+                  value: stats['pendingShipments'].toString(),
+                  icon: Icons.local_shipping,
+                  color: Colors.amber,
+                ),
               ],
             ),
             
+            const SizedBox(height: 24),
+
+            // Bloque de Ingresos Totales
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.grey[900],
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.green.withOpacity(0.5)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Ingresos Totales',
+                    style: TextStyle(color: Colors.grey, fontSize: 12),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '\u20ac${(stats['totalRevenue'] as num).toStringAsFixed(2)}',
+                    style: const TextStyle(
+                      color: Colors.green,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Actualizado: ${_formatDateTime(stats['lastUpdated'])}',
+                    style: const TextStyle(color: Colors.grey, fontSize: 10),
+                  ),
+                ],
+              ),
+            ),
+
             const SizedBox(height: 24),
             
             // KPI Cards Row
@@ -237,7 +378,7 @@ class AdminDashboardMobile extends ConsumerWidget {
                 Expanded(
                   child: _KPICard(
                     title: 'Ventas del Mes',
-                    value: 'â‚¬${stats['monthlyRevenue']?.toStringAsFixed(2) ?? '0.00'}',
+                    value: '\u20ac${stats['monthlyRevenue']?.toStringAsFixed(2) ?? '0.00'}',
                     icon: Icons.trending_up,
                     color: Colors.green,
                   ),
@@ -255,17 +396,39 @@ class AdminDashboardMobile extends ConsumerWidget {
             ),
             const SizedBox(height: 12),
             _KPICard(
-              title: 'Producto MÃ¡s Vendido',
+              title: 'Producto M\u00e1s Vendido',
               value: stats['topProduct'] ?? 'Sin datos',
               icon: Icons.star,
               color: Colors.amber,
+            ),
+
+            const SizedBox(height: 24),
+
+            // Estado de \u00d3rdenes
+            const Text(
+              'Estado de \u00d3rdenes',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 12),
+            orderStatsAsync.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (err, _) => Text('Error: $err', style: const TextStyle(color: Colors.red)),
+              data: (orderStats) => Column(
+                children: orderStats.entries
+                    .map((e) => _OrderStatusRow(status: e.key, count: e.value))
+                    .toList(),
+              ),
             ),
             
             const SizedBox(height: 24),
             
             // Sales Chart - Last 7 Days
             const Text(
-              'Ventas Ãšltimos 7 DÃ­as',
+              'Ventas \u00daltimos 7 D\u00edas',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.amber),
             ),
             const SizedBox(height: 16),
@@ -284,7 +447,7 @@ class AdminDashboardMobile extends ConsumerWidget {
             
             // Quick Email Access
             const Text(
-              'Acceso RÃ¡pido',
+              'Acceso Rápido',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.amber),
             ),
             const SizedBox(height: 12),
@@ -292,14 +455,14 @@ class AdminDashboardMobile extends ConsumerWidget {
             _QuickActionCard(
               icon: Icons.add_box,
               title: 'Nuevo Producto',
-              subtitle: 'AÃ±adir sneaker al catÃ¡logo',
+              subtitle: 'Añadir sneaker al catálogo',
               color: Colors.pink,
               onTap: () => _showProductForm(context, ref),
             ),
             const SizedBox(height: 8),
             _QuickActionCard(
               icon: Icons.category,
-              title: 'Gestionar CategorÃ­as',
+              title: 'Gestionar Categorías',
               subtitle: 'Organizar colecciones',
               color: Colors.purple,
               onTap: () => ref.read(adminSelectedSectionProvider.notifier).setSection(3),
@@ -308,7 +471,7 @@ class AdminDashboardMobile extends ConsumerWidget {
             _QuickActionCard(
               icon: Icons.shopping_bag,
               title: 'Ver Pedidos',
-              subtitle: 'Gestionar Ã³rdenes',
+              subtitle: 'Gestionar órdenes',
               color: Colors.green,
               onTap: () => ref.read(adminSelectedSectionProvider.notifier).setSection(1),
             ),
@@ -328,7 +491,7 @@ class AdminDashboardMobile extends ConsumerWidget {
               data: (orders) => Column(
                 children: orders.take(5).map((order) => _ActivityItem(
                   title: 'Pedido #${order.displayId}',
-                  subtitle: '${DateFormat('dd/MM HH:mm').format(order.createdAt)} - â‚¬${(order.totalPrice / 100).toStringAsFixed(2)}',
+                  subtitle: '${DateFormat('dd/MM HH:mm').format(order.createdAt)} - \u20ac${(order.totalPrice / 100).toStringAsFixed(2)}',
                   icon: Icons.receipt,
                   onTap: () => _showOrderDetails(context, order),
                 )).toList(),
@@ -340,12 +503,94 @@ class AdminDashboardMobile extends ConsumerWidget {
     );
   }
 
+  String _formatDateTime(dynamic dateTime) {
+    if (dateTime == null) return 'N/A';
+    try {
+      final dt = dateTime is DateTime ? dateTime : DateTime.parse(dateTime.toString());
+      return DateFormat('dd/MM/yyyy HH:mm').format(dt);
+    } catch (e) {
+      return 'N/A';
+    }
+  }
+
   void _showOrderDetails(BuildContext context, Order order) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => _OrderDetailSheet(order: order),
+    );
+  }
+}
+
+// Widget para mostrar estado de órdenes en el dashboard
+class _OrderStatusRow extends StatelessWidget {
+  final String status;
+  final int count;
+
+  const _OrderStatusRow({
+    required this.status,
+    required this.count,
+  });
+
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'completed': return Colors.green;
+      case 'processing': return Colors.blue;
+      case 'pending': return Colors.orange;
+      case 'paid': return Colors.teal;
+      case 'cancelled': return Colors.red;
+      case 'shipped': return Colors.cyan;
+      case 'delivered': return Colors.lightGreen;
+      default: return Colors.grey;
+    }
+  }
+
+  String _getStatusLabel(String status) {
+    const labels = {
+      'completed': 'Completadas',
+      'processing': 'Procesando',
+      'pending': 'Pendientes',
+      'paid': 'Pagadas',
+      'cancelled': 'Canceladas',
+      'shipped': 'Enviadas',
+      'delivered': 'Entregadas',
+    };
+    return labels[status] ?? status;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _getStatusColor(status);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.grey[900],
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            _getStatusLabel(status),
+            style: TextStyle(color: color, fontWeight: FontWeight.w500),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              count.toString(),
+              style: TextStyle(color: color, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

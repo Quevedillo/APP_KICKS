@@ -36,32 +36,30 @@ class OrderRepository {
       'quantity': item.quantity,
     }).toList();
 
-    // Intentamos insertar con todas las columnas. Si falla por PGRST204,
-    // retentamos con solo las columnas base garantizadas.
-    final fullOrderData = {
+    // Metadatos de descuento se guardan dentro del JSON de items
+    // porque las columnas discount_amount/subtotal_amount/discount_code_id
+    // no existen en la tabla orders.
+    if (discountAmount != null && discountAmount > 0) {
+      itemsJson.add({
+        '_meta': true,
+        'discount_amount': discountAmount,
+        'subtotal_amount': totalPrice + discountAmount,
+        'discount_code_id': discountCodeId,
+      });
+    }
+
+    // Datos del pedido alineados con el schema real de la tabla orders.
+    // La tabla usa 'billing_email' (no 'shipping_email').
+    final orderData = {
       'user_id': userId,
       'stripe_payment_intent_id': stripePaymentIntentId,
       'total_amount': totalPrice,
-      'subtotal_amount': totalPrice + (discountAmount ?? 0),
-      'discount_amount': discountAmount ?? 0,
-      'discount_code_id': discountCodeId,
       'status': 'paid',
       'items': itemsJson,
       'shipping_name': shippingName ?? _client.auth.currentUser?.email?.split('@').first,
-      'shipping_email': shippingEmail ?? _client.auth.currentUser?.email,
+      'billing_email': shippingEmail ?? _client.auth.currentUser?.email,
       'shipping_phone': shippingPhone,
       'shipping_address': shippingAddress,
-      'created_at': DateTime.now().toIso8601String(),
-    };
-
-    // Datos mínimos garantizados (sin columnas opcionales que puedan faltar)
-    final minimalOrderData = {
-      'user_id': userId,
-      'stripe_payment_intent_id': stripePaymentIntentId,
-      'total_amount': totalPrice,
-      'status': 'paid',
-      'items': itemsJson,
-      'shipping_email': shippingEmail ?? _client.auth.currentUser?.email,
       'created_at': DateTime.now().toIso8601String(),
     };
 
@@ -69,35 +67,29 @@ class OrderRepository {
     try {
       response = await _client
           .from('orders')
-          .insert(fullOrderData)
+          .insert(orderData)
           .select()
           .single();
-    } catch (fullInsertErr) {
-      final errStr = fullInsertErr.toString();
+    } catch (insertErr) {
+      final errStr = insertErr.toString();
       // PGRST204 = columna no encontrada en schema cache
       if (errStr.contains('PGRST204') || errStr.contains('schema cache')) {
-        print('⚠️ INSERT completo falló (columnas faltantes), usando INSERT mínimo: $fullInsertErr');
-        // Intentar con subconjunto sin las columnas que causan error
-        try {
-          response = await _client
-              .from('orders')
-              .insert(minimalOrderData)
-              .select()
-              .single();
-        } catch (minimalErr) {
-          // Si también falla, intentar SIN shipping_address (puede ser la culpable)
-          final withoutAddressData = Map<String, dynamic>.from(fullOrderData)
-            ..remove('shipping_address')
-            ..remove('shipping_phone')
-            ..remove('subtotal_amount')
-            ..remove('discount_amount')
-            ..remove('discount_code_id');
-          response = await _client
-              .from('orders')
-              .insert(withoutAddressData)
-              .select()
-              .single();
-        }
+        print('⚠️ INSERT falló (columna faltante), reintentando sin opcionales: $insertErr');
+        // Reintentar solo con columnas mínimas garantizadas
+        final minimalData = {
+          'user_id': userId,
+          'stripe_payment_intent_id': stripePaymentIntentId,
+          'total_amount': totalPrice,
+          'status': 'paid',
+          'items': itemsJson,
+          'billing_email': shippingEmail ?? _client.auth.currentUser?.email,
+          'created_at': DateTime.now().toIso8601String(),
+        };
+        response = await _client
+            .from('orders')
+            .insert(minimalData)
+            .select()
+            .single();
       } else {
         rethrow;
       }
