@@ -615,6 +615,21 @@ class _OrderCard extends StatelessWidget {
       final pdf = pw.Document();
       final invoiceData = order.toInvoiceData();
       final currencyFormat = NumberFormat.currency(locale: 'es_ES', symbol: '€');
+
+      // Precargar imágenes de productos
+      final items = invoiceData['items'] as List;
+      final Map<int, pw.ImageProvider> productImages = {};
+      for (int i = 0; i < items.length; i++) {
+        final imageUrl = items[i]['image'] as String?;
+        if (imageUrl != null && imageUrl.isNotEmpty) {
+          try {
+            final netImage = await networkImage(imageUrl);
+            productImages[i] = netImage;
+          } catch (_) {
+            // Si no se puede cargar la imagen, se omite
+          }
+        }
+      }
       
       pdf.addPage(
         pw.Page(
@@ -677,6 +692,7 @@ class _OrderCard extends StatelessWidget {
                   color: PdfColors.amber,
                   child: pw.Row(
                     children: [
+                      pw.SizedBox(width: 45),
                       pw.Expanded(flex: 3, child: pw.Text('Producto', 
                         style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
                       pw.Expanded(child: pw.Text('Talla', 
@@ -696,13 +712,31 @@ class _OrderCard extends StatelessWidget {
                 ),
                 
                 // Items
-                ...((invoiceData['items'] as List).map((item) => pw.Container(
-                  padding: const pw.EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+                ...((invoiceData['items'] as List).asMap().entries.map((entry) {
+                  final idx = entry.key;
+                  final item = entry.value;
+                  return pw.Container(
+                  padding: const pw.EdgeInsets.symmetric(vertical: 6, horizontal: 10),
                   decoration: const pw.BoxDecoration(
                     border: pw.Border(bottom: pw.BorderSide(color: PdfColors.grey300)),
                   ),
                   child: pw.Row(
                     children: [
+                      pw.SizedBox(
+                        width: 45,
+                        height: 45,
+                        child: productImages.containsKey(idx)
+                          ? pw.Image(productImages[idx]!, fit: pw.BoxFit.contain)
+                          : pw.Container(
+                              decoration: pw.BoxDecoration(
+                                color: PdfColors.grey200,
+                                borderRadius: pw.BorderRadius.circular(4),
+                              ),
+                              alignment: pw.Alignment.center,
+                              child: pw.Text('N/A', style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey)),
+                            ),
+                      ),
+                      pw.SizedBox(width: 6),
                       pw.Expanded(flex: 3, child: pw.Column(
                         crossAxisAlignment: pw.CrossAxisAlignment.start,
                         children: [
@@ -718,7 +752,8 @@ class _OrderCard extends StatelessWidget {
                         textAlign: pw.TextAlign.right)),
                     ],
                   ),
-                ))),
+                );
+                })),
                 
                 pw.SizedBox(height: 20),
                 

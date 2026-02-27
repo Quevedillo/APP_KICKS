@@ -25,7 +25,7 @@ class OrderItem {
     final quantityValue = json['quantity'] ?? json['qty'] ?? 1;
     
     // Helper para convertir a int de forma segura
-    int _safeInt(dynamic value) {
+    int safeInt(dynamic value) {
       if (value == null) return 0;
       if (value is int) return value;
       if (value is double) return value.toInt();
@@ -39,9 +39,9 @@ class OrderItem {
       productName: product?['name'] ?? json['name'] ?? '',
       productBrand: product?['brand'] ?? json['brand'] ?? '',
       productImage: (product?['images'] as List?)?.first ?? json['image'] ?? '',
-      price: _safeInt(priceValue),
+      price: safeInt(priceValue),
       size: json['size'] ?? '',
-      quantity: _safeInt(quantityValue),
+      quantity: safeInt(quantityValue),
     );
   }
 
@@ -237,6 +237,7 @@ class Order {
       'items': items.map((item) => {
         'name': item.productName,
         'brand': item.productBrand,
+        'image': item.productImage,
         'size': item.size,
         'quantity': item.quantity,
         'unitPrice': item.price / 100,

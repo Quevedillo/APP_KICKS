@@ -92,7 +92,7 @@ class ProductRepository {
         data = await query.order('created_at', ascending: false);
     }
 
-    return (data as List).map((e) => Product.fromJson(e)).toList();
+    return (data).map((e) => Product.fromJson(e)).toList();
   }
 
   /// Obtiene todos los productos con descuento activo (para la sección Ofertas)

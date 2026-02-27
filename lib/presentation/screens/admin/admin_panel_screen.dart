@@ -951,7 +951,7 @@ class _AdminOrdersMobileState extends ConsumerState<AdminOrdersMobile> {
                                         ),
                                       ),
                                       Text(
-                                        'â‚¬${(order.totalPrice / 100).toStringAsFixed(2)}',
+                                        '€${(order.totalPrice / 100).toStringAsFixed(2)}',
                                         style: const TextStyle(
                                           color: Colors.amber,
                                           fontWeight: FontWeight.bold,
@@ -1155,7 +1155,7 @@ class _OrderDetailSheetState extends ConsumerState<_OrderDetailSheet> {
         title: Text(
           action == 'refunded'
               ? 'Motivo del reembolso'
-              : 'Motivo de cancelaciÃ³n',
+              : 'Motivo de cancelación',
         ),
         content: TextField(
           controller: controller,
@@ -1383,7 +1383,7 @@ class _OrderDetailSheetState extends ConsumerState<_OrderDetailSheet> {
                 const SizedBox(height: 16),
 
                 // â”€â”€ Order items â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-                _OrderSectionHeader('ARTÃCULOS (${_order.items.length})'),
+                _OrderSectionHeader('ARTÍCULOS (${_order.items.length})'),
                 ..._order.items.map((item) => Container(
                       margin: const EdgeInsets.only(bottom: 8),
                       padding: const EdgeInsets.all(12),
@@ -1443,7 +1443,7 @@ class _OrderDetailSheetState extends ConsumerState<_OrderDetailSheet> {
                             ),
                           ),
                           Text(
-                            'â‚¬${(item.price * item.quantity / 100).toStringAsFixed(2)}',
+                            '€${(item.price * item.quantity / 100).toStringAsFixed(2)}',
                             style: const TextStyle(
                                 fontWeight: FontWeight.bold,
                                 color: Colors.amber),
@@ -1458,11 +1458,11 @@ class _OrderDetailSheetState extends ConsumerState<_OrderDetailSheet> {
                 _OrderSectionHeader('IMPORTE'),
                 if (_order.discountAmount != null && _order.discountAmount! > 0)
                   _OrderTotalRow('Descuento',
-                      '-â‚¬${(_order.discountAmount! / 100).toStringAsFixed(2)}',
+                      '-€${(_order.discountAmount! / 100).toStringAsFixed(2)}',
                       color: Colors.green),
                 _OrderTotalRow(
                   'TOTAL',
-                  'â‚¬${(_order.totalPrice / 100).toStringAsFixed(2)}',
+                  '€${(_order.totalPrice / 100).toStringAsFixed(2)}',
                   bold: true,
                   color: Colors.amber,
                 ),
@@ -1522,23 +1522,48 @@ class _OrderDetailSheetState extends ConsumerState<_OrderDetailSheet> {
     final email = _order.shippingEmail ?? 'cliente@email.com';
     final name = _order.shippingName ?? 'Cliente';
     final id = '#${_order.displayId}';
+    final itemsList = _order.items.map((item) =>
+      '  • ${item.productName} (Talla ${item.size}) x${item.quantity} - ${(item.price * item.quantity / 100).toStringAsFixed(2)}€'
+    ).join('\n');
+    final totalStr = (_order.totalPrice / 100).toStringAsFixed(2);
+    final shippingAmount = _order.shippingAmount ?? 0;
+    final refundAmount = ((_order.totalPrice - shippingAmount) / 100).toStringAsFixed(2);
+    final shippingNote = shippingAmount > 0
+        ? '\n(El coste de envío de ${(shippingAmount / 100).toStringAsFixed(2)}€ no es reembolsable)\n'
+        : '';
 
     final templates = {
-      'Enviado ðŸ“¦': '''Hola $name,
+      'Enviado 📦': '''Hola $name,
 
-Tu pedido $id ha sido enviado. RecibirÃ¡s el cÃ³digo de seguimiento en breve.
+Tu pedido $id ha sido enviado. Recibirás el código de seguimiento en breve.
 
-Â¡Gracias por confiar en KicksPremium!''',
-      'Reembolso ðŸ’¸': '''Hola $name,
+Productos enviados:
+$itemsList
 
-Tu pedido $id ha sido reembolsado. El importe tardarÃ¡ entre 3-5 dÃ­as hÃ¡biles en reflejarse en tu cuenta.
+Importe total: $totalStr€
+
+¡Gracias por confiar en KicksPremium!''',
+      'Reembolso 💸': '''Hola $name,
+
+Tu pedido $id ha sido reembolsado.
+
+Productos devueltos:
+$itemsList
+
+Importe reembolsado: $refundAmount€$shippingNote
+El importe tardará entre 3-5 días hábiles en reflejarse en tu cuenta.
 
 Lamentamos los inconvenientes.''',
-      'CancelaciÃ³n âŒ': '''Hola $name,
+      'Cancelación ❌': '''Hola $name,
 
-Tu pedido $id ha sido cancelado. ${_order.cancelledReason ?? ''}
+Tu pedido $id ha sido cancelado.${_order.cancelledReason != null && _order.cancelledReason!.isNotEmpty ? '\n\nMotivo: ${_order.cancelledReason}' : ''}
 
-Si tienes alguna duda contÃ¡ctanos.''',
+Productos cancelados:
+$itemsList
+
+Importe total: $totalStr€
+
+Si tienes alguna duda contáctanos en support@kickspremium.com.''',
     };
 
     return Column(
@@ -1736,7 +1761,7 @@ class AdminProductsMobile extends ConsumerWidget {
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
-                                Text('â‚¬${(product.price / 100).toStringAsFixed(2)}', style: const TextStyle(color: Colors.amber, fontSize: 12)),
+                                Text('€${(product.price / 100).toStringAsFixed(2)}', style: const TextStyle(color: Colors.amber, fontSize: 12)),
                                 Text(
                                   '${product.sizesAvailable.values.fold<int>(0, (sum, v) => sum + (v is int ? v : int.tryParse(v.toString()) ?? 0))} pares',
                                   style: TextStyle(color: Colors.grey[500], fontSize: 10),
@@ -1846,19 +1871,19 @@ class AdminEmailsMobile extends StatelessWidget {
           
           _EmailTypeCard(
             icon: Icons.shopping_cart,
-            title: 'ConfirmaciÃ³n de Compra',
+            title: 'Confirmación de Compra',
             color: Colors.green,
             onTap: () {},
           ),
           _EmailTypeCard(
             icon: Icons.cancel,
-            title: 'CancelaciÃ³n de Pedido',
+            title: 'Cancelación de Pedido',
             color: Colors.red,
             onTap: () {},
           ),
           _EmailTypeCard(
             icon: Icons.local_shipping,
-            title: 'ActualizaciÃ³n de EnvÃ­o',
+            title: 'Actualización de Envío',
             color: Colors.blue,
             onTap: () {},
           ),
@@ -1870,7 +1895,7 @@ class AdminEmailsMobile extends StatelessWidget {
           ),
           _EmailTypeCard(
             icon: Icons.local_offer,
-            title: 'PromociÃ³n',
+            title: 'Promoción',
             color: Colors.orange,
             onTap: () {},
           ),
@@ -1973,7 +1998,7 @@ class AdminCategoriesMobile extends ConsumerWidget {
           child: Row(
             children: [
               const Expanded(
-                child: Text('CategorÃ­as', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                child: Text('Categorías', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
               ),
               ElevatedButton.icon(
                 onPressed: () => _showCategoryForm(context, ref),
@@ -2076,7 +2101,7 @@ class AdminCouponsMobile extends ConsumerWidget {
                     subtitle: Text(
                       coupon.discountType == 'percentage' 
                         ? '${coupon.discountValue}% de descuento'
-                        : 'â‚¬${(coupon.discountValue / 100).toStringAsFixed(2)} de descuento',
+                        : '€${(coupon.discountValue / 100).toStringAsFixed(2)} de descuento',
                       style: TextStyle(fontSize: 12, color: Colors.grey[400]),
                     ),
                     trailing: Text(
@@ -2131,7 +2156,7 @@ class _AdminFinanceMobileState extends ConsumerState<AdminFinanceMobile> {
         final totalProfit = (stats['totalProfit'] as num?)?.toDouble() ?? 0.0;
 
         // Select values based on period
-        final periodLabels = ['24 Horas', '7 DÃ­as', '1 Mes', 'Total'];
+        final periodLabels = ['24 Horas', '7 Días', '1 Mes', 'Total'];
         double periodRevenue;
         int periodOrders;
         switch (_selectedPeriod) {
@@ -2193,9 +2218,9 @@ class _AdminFinanceMobileState extends ConsumerState<AdminFinanceMobile> {
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 children: [
-                  _ReportCard(title: 'Ingresos ${periodLabels[_selectedPeriod]}', value: 'â‚¬${periodRevenue.toStringAsFixed(2)}', icon: Icons.trending_up, color: Colors.green),
+                  _ReportCard(title: 'Ingresos ${periodLabels[_selectedPeriod]}', value: '€${periodRevenue.toStringAsFixed(2)}', icon: Icons.trending_up, color: Colors.green),
                   _ReportCard(title: 'Pedidos', value: '$periodOrders', icon: Icons.shopping_bag, color: Colors.blue),
-                  _ReportCard(title: 'Ticket Medio', value: 'â‚¬${avgTicket.toStringAsFixed(2)}', icon: Icons.shopping_cart, color: Colors.purple),
+                  _ReportCard(title: 'Ticket Medio', value: '€${avgTicket.toStringAsFixed(2)}', icon: Icons.shopping_cart, color: Colors.purple),
                   _ReportCard(title: 'Pendientes', value: '$pendingOrders', icon: Icons.pending_actions, color: Colors.orange),
                 ],
               ),
@@ -2210,7 +2235,7 @@ class _AdminFinanceMobileState extends ConsumerState<AdminFinanceMobile> {
                   Expanded(
                     child: _KPICard(
                       title: 'Coste Total',
-                      value: 'â‚¬${totalCost.toStringAsFixed(2)}',
+                      value: '€${totalCost.toStringAsFixed(2)}',
                       icon: Icons.money_off,
                       color: Colors.red,
                     ),
@@ -2219,7 +2244,7 @@ class _AdminFinanceMobileState extends ConsumerState<AdminFinanceMobile> {
                   Expanded(
                     child: _KPICard(
                       title: 'Beneficio',
-                      value: 'â‚¬${totalProfit.toStringAsFixed(2)}',
+                      value: '€${totalProfit.toStringAsFixed(2)}',
                       icon: Icons.savings,
                       color: totalProfit >= 0 ? Colors.green : Colors.red,
                     ),
@@ -2232,7 +2257,7 @@ class _AdminFinanceMobileState extends ConsumerState<AdminFinanceMobile> {
                   Expanded(
                     child: _KPICard(
                       title: 'Ingresos Totales',
-                      value: 'â‚¬${totalRevenue.toStringAsFixed(2)}',
+                      value: '€${totalRevenue.toStringAsFixed(2)}',
                       icon: Icons.account_balance_wallet,
                       color: Colors.blue,
                     ),
@@ -2250,7 +2275,7 @@ class _AdminFinanceMobileState extends ConsumerState<AdminFinanceMobile> {
               ),
               
               const SizedBox(height: 24),
-              const Text('Ventas Ãšltimos 7 DÃ­as', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const Text('Ventas Ãšltimos 7 Días', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 12),
               
               Container(
@@ -2325,7 +2350,7 @@ class _AdminSettingsMobileState extends State<AdminSettingsMobile> {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        const Text('ConfiguraciÃ³n', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+        const Text('Configuración', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
         const SizedBox(height: 24),
         
         _SettingSwitch(
@@ -2352,8 +2377,8 @@ class _AdminSettingsMobileState extends State<AdminSettingsMobile> {
         const SizedBox(height: 12),
         
         _SettingItem(title: 'Datos de la Tienda', icon: Icons.store, onTap: () {}),
-        _SettingItem(title: 'MÃ©todos de Pago', icon: Icons.payment, onTap: () {}),
-        _SettingItem(title: 'Opciones de EnvÃ­o', icon: Icons.local_shipping, onTap: () {}),
+        _SettingItem(title: 'Métodos de Pago', icon: Icons.payment, onTap: () {}),
+        _SettingItem(title: 'Opciones de Envío', icon: Icons.local_shipping, onTap: () {}),
         _SettingItem(title: 'Impuestos', icon: Icons.receipt, onTap: () {}),
       ],
     );
@@ -2450,7 +2475,7 @@ class _StatusChangeDropdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Definir transiciones vÃ¡lidas de estado
+    // Definir transiciones válidas de estado
     final validTransitions = _getValidTransitions(currentStatus);
 
     return Container(
@@ -2700,7 +2725,7 @@ extension _ProductDetailSheetExtension on _ProductDetailSheet {
       builder: (context) => AlertDialog(
         backgroundColor: Colors.grey[900],
         title: const Text('Eliminar Producto'),
-        content: Text('Â¿EstÃ¡s seguro de que quieres eliminar "${product.name}"?'),
+        content: Text('¿Estás seguro de que quieres eliminar "${product.name}"?'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('CANCELAR')),
           TextButton(
@@ -2785,16 +2810,19 @@ class _ProductFormDialogState extends ConsumerState<_ProductFormDialog> {
   late TextEditingController _skuController;
   bool _isSaving = false;
   
-  // GestiÃ³n de fotos
+  // Gestión de fotos
   List<String> _existingImages = [];
   final List<File> _newImages = [];
   
+  // Producto destacado
+  bool _isFeatured = false;
+
   // Descuento en producto
   bool _hasDiscount = false;
   String _discountType = 'percentage'; // 'percentage' | 'fixed'
   late TextEditingController _discountValueController;
 
-  // Tipo de colecciÃ³n / lanzamiento
+  // Tipo de colección / lanzamiento
   String _releaseType = 'standard'; // 'standard' | 'new' | 'restock'
 
   // Inventario por talla (zapatos exclusivos)
@@ -2814,6 +2842,7 @@ class _ProductFormDialogState extends ConsumerState<_ProductFormDialog> {
     _brandController = TextEditingController(text: widget.product?.brand ?? '');
     _skuController = TextEditingController(text: widget.product?.sku ?? '');
     _existingImages = List<String>.from(widget.product?.images ?? []);
+    _isFeatured = widget.product?.isFeatured ?? false;
     
     // Descuento
     final existingDiscountValue = widget.product?.discountValue;
@@ -2895,7 +2924,7 @@ class _ProductFormDialogState extends ConsumerState<_ProductFormDialog> {
     final sizesAvailable = _buildSizesAvailable();
     if (sizesAvailable.isEmpty && _existingImages.isEmpty && _newImages.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('AÃ±ade al menos una talla con stock')),
+        const SnackBar(content: Text('Añade al menos una talla con stock')),
       );
       return;
     }
@@ -2903,7 +2932,7 @@ class _ProductFormDialogState extends ConsumerState<_ProductFormDialog> {
     setState(() => _isSaving = true);
 
     try {
-      // Subir nuevas imÃ¡genes a Supabase Storage
+      // Subir nuevas imágenes a Supabase Storage
       final List<String> uploadedUrls = List.from(_existingImages);
       final supabase = ref.read(supabaseClientProvider);
       
@@ -2937,7 +2966,7 @@ class _ProductFormDialogState extends ConsumerState<_ProductFormDialog> {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('Error al subir imagen. Crea el bucket "product-images" en Supabase Storage con acceso pÃºblico.'),
+                content: Text('Error al subir imagen. Crea el bucket "product-images" en Supabase Storage con acceso público.'),
                 backgroundColor: Colors.orange,
                 duration: const Duration(seconds: 5),
               ),
@@ -2972,7 +3001,7 @@ class _ProductFormDialogState extends ConsumerState<_ProductFormDialog> {
         brand: brand,
         sku: sku,
         isLimitedEdition: widget.product?.isLimitedEdition ?? false,
-        isFeatured: widget.product?.isFeatured ?? false,
+        isFeatured: _isFeatured,
         isActive: widget.product?.isActive ?? true,
         sizesAvailable: sizesAvailable,
         images: uploadedUrls,
@@ -3014,7 +3043,7 @@ class _ProductFormDialogState extends ConsumerState<_ProductFormDialog> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            // --- SecciÃ³n de fotos ---
+            // --- Sección de fotos ---
             const Text('FOTOS DEL PRODUCTO', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.amber, fontSize: 14)),
             const SizedBox(height: 8),
             SizedBox(
@@ -3022,17 +3051,17 @@ class _ProductFormDialogState extends ConsumerState<_ProductFormDialog> {
               child: ListView(
                 scrollDirection: Axis.horizontal,
                 children: [
-                  // ImÃ¡genes existentes
+                  // Imágenes existentes
                   ..._existingImages.asMap().entries.map((entry) => _ImageTile(
                     imageWidget: Image.network(entry.value, fit: BoxFit.cover, width: 100, height: 100),
                     onRemove: () => _removeExistingImage(entry.key),
                   )),
-                  // Nuevas imÃ¡genes locales
+                  // Nuevas imágenes locales
                   ..._newImages.asMap().entries.map((entry) => _ImageTile(
                     imageWidget: Image.file(entry.value, fit: BoxFit.cover, width: 100, height: 100),
                     onRemove: () => _removeNewImage(entry.key),
                   )),
-                  // BotÃ³n aÃ±adir
+                  // Botón añadir
                   GestureDetector(
                     onTap: _pickImage,
                     child: Container(
@@ -3049,7 +3078,7 @@ class _ProductFormDialogState extends ConsumerState<_ProductFormDialog> {
                         children: [
                           Icon(Icons.add_a_photo, color: Colors.amber, size: 28),
                           SizedBox(height: 4),
-                          Text('AÃ±adir', style: TextStyle(color: Colors.amber, fontSize: 10)),
+                          Text('Añadir', style: TextStyle(color: Colors.amber, fontSize: 10)),
                         ],
                       ),
                     ),
@@ -3060,11 +3089,43 @@ class _ProductFormDialogState extends ConsumerState<_ProductFormDialog> {
             const SizedBox(height: 20),
             
             _FormEditField(label: 'Nombre', controller: _nameController, validator: (v) => v!.isEmpty ? 'Requerido' : null),
-            _FormEditField(label: 'Precio Venta (â‚¬)', controller: _priceController, keyboardType: TextInputType.number),
-            _FormEditField(label: 'Precio Coste (â‚¬)', controller: _costPriceController, keyboardType: TextInputType.number),
+            _FormEditField(label: 'Precio Venta (€)', controller: _priceController, keyboardType: TextInputType.number),
+            _FormEditField(label: 'Precio Coste (€)', controller: _costPriceController, keyboardType: TextInputType.number),
             _FormEditField(label: 'Marca', controller: _brandController),
             _FormEditField(label: 'SKU', controller: _skuController),
             
+            const SizedBox(height: 20),
+
+            // ─── DESTACADO ──────────────────────────────────────
+            const Text('DESTACADO', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.amber, fontSize: 14)),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey[900],
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Producto Destacado', style: TextStyle(fontWeight: FontWeight.w500)),
+                        Text('Aparecerá en la sección principal del inicio', style: TextStyle(fontSize: 12, color: Colors.grey[400])),
+                      ],
+                    ),
+                  ),
+                  Switch(
+                    value: _isFeatured,
+                    onChanged: (v) => setState(() => _isFeatured = v),
+                    activeThumbColor: Colors.amber,
+                    activeTrackColor: Colors.amber[900],
+                  ),
+                ],
+              ),
+            ),
+
             const SizedBox(height: 20),
 
             // â”€â”€â”€ DESCUENTO â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -3086,7 +3147,7 @@ class _ProductFormDialogState extends ConsumerState<_ProductFormDialog> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Text('Activar descuento', style: TextStyle(fontWeight: FontWeight.w500)),
-                            Text('El producto aparecerÃ¡ en Ofertas', style: TextStyle(fontSize: 12, color: Colors.grey[400])),
+                            Text('El producto aparecerá en Ofertas', style: TextStyle(fontSize: 12, color: Colors.grey[400])),
                           ],
                         ),
                       ),
@@ -3138,7 +3199,7 @@ class _ProductFormDialogState extends ConsumerState<_ProductFormDialog> {
                               ),
                               child: Center(
                                 child: Text(
-                                  'Fijo (â‚¬)',
+                                  'Fijo (€)',
                                   style: TextStyle(
                                     color: _discountType == 'fixed' ? Colors.white : Colors.grey[400],
                                     fontWeight: FontWeight.bold,
@@ -3159,12 +3220,12 @@ class _ProductFormDialogState extends ConsumerState<_ProductFormDialog> {
                       onChanged: (_) => setState(() {}),
                       style: const TextStyle(color: Colors.white),
                       decoration: InputDecoration(
-                        labelText: _discountType == 'percentage' ? 'Porcentaje (ej: 20)' : 'Cantidad en â‚¬ (ej: 15)',
+                        labelText: _discountType == 'percentage' ? 'Porcentaje (ej: 20)' : 'Cantidad en € (ej: 15)',
                         labelStyle: TextStyle(color: Colors.grey[400]),
                         filled: true,
                         fillColor: Colors.grey[850],
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                        suffixText: _discountType == 'percentage' ? '%' : 'â‚¬',
+                        suffixText: _discountType == 'percentage' ? '%' : '€',
                         suffixStyle: const TextStyle(color: Colors.amber),
                       ),
                     ),
@@ -3183,11 +3244,11 @@ class _ProductFormDialogState extends ConsumerState<_ProductFormDialog> {
                         if (finalPrice < 0) finalPrice = 0;
                         return Row(
                           children: [
-                            Text('Precio original: â‚¬${price.toStringAsFixed(2)}', style: TextStyle(color: Colors.grey[400], fontSize: 12)),
+                            Text('Precio original: €${price.toStringAsFixed(2)}', style: TextStyle(color: Colors.grey[400], fontSize: 12)),
                             const SizedBox(width: 8),
                             const Icon(Icons.arrow_forward, size: 14, color: Colors.grey),
                             const SizedBox(width: 8),
-                            Text('Precio final: â‚¬${finalPrice.toStringAsFixed(2)}', style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 12)),
+                            Text('Precio final: €${finalPrice.toStringAsFixed(2)}', style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 12)),
                           ],
                         );
                       }),
@@ -3205,9 +3266,9 @@ class _ProductFormDialogState extends ConsumerState<_ProductFormDialog> {
             Row(
               children: [
                 for (final entry in [
-                  ('standard', 'EstÃ¡ndar'),
-                  ('new', 'âœ¨ Nuevo'),
-                  ('restock', 'ðŸ”„ Restock'),
+                  ('standard', 'Estándar'),
+                  ('new', '✨ Nuevo'),
+                  ('restock', '🔄 Restock'),
                 ])
                   Expanded(
                     child: GestureDetector(
@@ -3314,7 +3375,7 @@ class _ProductFormDialogState extends ConsumerState<_ProductFormDialog> {
   }
 }
 
-// Widget auxiliar para miniatura de imagen con botÃ³n eliminar
+// Widget auxiliar para miniatura de imagen con botón eliminar
 class _ImageTile extends StatelessWidget {
   final Widget imageWidget;
   final VoidCallback onRemove;
@@ -3373,7 +3434,7 @@ class _CategoryFormDialogState extends ConsumerState<_CategoryFormDialog> {
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.category?.name ?? '');
-    _iconController = TextEditingController(text: widget.category?.icon ?? 'ðŸ‘Ÿ');
+    _iconController = TextEditingController(text: widget.category?.icon ?? '👟');
     _orderController = TextEditingController(text: widget.category?.displayOrder.toString() ?? '0');
   }
 
@@ -3409,7 +3470,7 @@ class _CategoryFormDialogState extends ConsumerState<_CategoryFormDialog> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black.withOpacity(0.9),
-      appBar: AppBar(title: const Text('CategorÃ­a')),
+      appBar: AppBar(title: const Text('Categoría')),
       body: Form(
         key: _formKey,
         child: ListView(
@@ -3525,7 +3586,7 @@ class _CouponFormDialogState extends ConsumerState<_CouponFormDialog> {
       if (success && mounted) {
         Navigator.pop(context, true);
       } else if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Error al guardar cupÃ³n')));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Error al guardar cupón')));
       }
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
@@ -3539,7 +3600,7 @@ class _CouponFormDialogState extends ConsumerState<_CouponFormDialog> {
     return Scaffold(
       backgroundColor: Colors.black.withOpacity(0.9),
       appBar: AppBar(
-        title: Text(widget.coupon == null ? 'Nuevo CupÃ³n' : 'Editar CupÃ³n'),
+        title: Text(widget.coupon == null ? 'Nuevo Cupón' : 'Editar Cupón'),
         actions: [
           if (_isSaving)
             const Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator())
@@ -3553,11 +3614,11 @@ class _CouponFormDialogState extends ConsumerState<_CouponFormDialog> {
           padding: const EdgeInsets.all(16),
           children: [
             _FormEditField(
-              label: 'CÃ³digo',
+              label: 'Código',
               controller: _codeController,
               validator: (v) => v == null || v.isEmpty ? 'Requerido' : null,
             ),
-            _FormEditField(label: 'DescripciÃ³n', controller: _descriptionController),
+            _FormEditField(label: 'Descripción', controller: _descriptionController),
             
             const SizedBox(height: 8),
             Text('Tipo de descuento', style: TextStyle(color: Colors.grey[400], fontSize: 12)),
@@ -3597,7 +3658,7 @@ class _CouponFormDialogState extends ConsumerState<_CouponFormDialog> {
                       ),
                       alignment: Alignment.center,
                       child: Text(
-                        'Fijo (â‚¬)',
+                        'Fijo (€)',
                         style: TextStyle(
                           color: _discountType == 'fixed' ? Colors.black : Colors.white,
                           fontWeight: FontWeight.bold,
@@ -3612,29 +3673,29 @@ class _CouponFormDialogState extends ConsumerState<_CouponFormDialog> {
             const SizedBox(height: 16),
             
             _FormEditField(
-              label: _discountType == 'percentage' ? 'Valor (%)' : 'Valor (â‚¬)',
+              label: _discountType == 'percentage' ? 'Valor (%)' : 'Valor (€)',
               controller: _valueController,
               keyboardType: TextInputType.number,
               validator: (v) => v == null || v.isEmpty ? 'Requerido' : null,
             ),
             _FormEditField(
-              label: 'Compra mÃ­nima (â‚¬)',
+              label: 'Compra mínima (€)',
               controller: _minPurchaseController,
               keyboardType: TextInputType.number,
             ),
             _FormEditField(
-              label: 'Usos mÃ¡ximos (vacÃ­o = ilimitados)',
+              label: 'Usos máximos (vacío = ilimitados)',
               controller: _maxUsesController,
               keyboardType: TextInputType.number,
             ),
             _FormEditField(
-              label: 'Usos mÃ¡ximos por usuario',
+              label: 'Usos máximos por usuario',
               controller: _maxUsesPerUserController,
               keyboardType: TextInputType.number,
             ),
             
             const SizedBox(height: 16),
-            // Fecha de expiraciÃ³n
+            // Fecha de expiración
             GestureDetector(
               onTap: _selectExpiryDate,
               child: Container(
@@ -3652,7 +3713,7 @@ class _CouponFormDialogState extends ConsumerState<_CouponFormDialog> {
                       child: Text(
                         _expiresAt != null
                             ? 'Expira: ${DateFormat('dd/MM/yyyy').format(_expiresAt!)}'
-                            : 'Sin fecha de expiraciÃ³n',
+                            : 'Sin fecha de expiración',
                         style: TextStyle(color: _expiresAt != null ? Colors.white : Colors.grey[400]),
                       ),
                     ),
@@ -3680,8 +3741,8 @@ class _CouponFormDialogState extends ConsumerState<_CouponFormDialog> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('CupÃ³n activo', style: TextStyle(fontWeight: FontWeight.w500)),
-                        Text('Los clientes pueden usar este cupÃ³n', style: TextStyle(fontSize: 12, color: Colors.grey[400])),
+                        const Text('Cupón activo', style: TextStyle(fontWeight: FontWeight.w500)),
+                        Text('Los clientes pueden usar este cupón', style: TextStyle(fontSize: 12, color: Colors.grey[400])),
                       ],
                     ),
                   ),
@@ -3828,7 +3889,7 @@ class _SalesChart extends StatelessWidget {
   Widget build(BuildContext context) {
     // Generate chart data - if no data, use sample days
     final List<BarChartGroupData> barGroups = [];
-    final weekDays = ['Lun', 'Mar', 'MiÃ©', 'Jue', 'Vie', 'SÃ¡b', 'Dom'];
+    final weekDays = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
     
     if (salesData.isEmpty) {
       // Sample data for empty state
@@ -3877,7 +3938,7 @@ class _SalesChart extends StatelessWidget {
             tooltipMargin: 8,
             getTooltipItem: (group, groupIndex, rod, rodIndex) {
               return BarTooltipItem(
-                'â‚¬${rod.toY.toStringAsFixed(0)}',
+                '€${rod.toY.toStringAsFixed(0)}',
                 const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
@@ -3913,7 +3974,7 @@ class _SalesChart extends StatelessWidget {
               reservedSize: 40,
               getTitlesWidget: (value, meta) {
                 return Text(
-                  'â‚¬${value.toInt()}',
+                  '€${value.toInt()}',
                   style: TextStyle(color: Colors.grey[500], fontSize: 10),
                 );
               },
