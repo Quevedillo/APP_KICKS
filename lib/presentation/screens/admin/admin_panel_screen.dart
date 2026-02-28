@@ -2275,7 +2275,7 @@ class _AdminFinanceMobileState extends ConsumerState<AdminFinanceMobile> {
               ),
               
               const SizedBox(height: 24),
-              const Text('Ventas Ãšltimos 7 Días', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const Text('Ventas Últimos 7 Días', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 12),
               
               Container(
@@ -2288,8 +2288,133 @@ class _AdminFinanceMobileState extends ConsumerState<AdminFinanceMobile> {
                 padding: const EdgeInsets.all(16),
                 child: _SalesChart(salesData: stats['salesLast7Days'] ?? []),
               ),
+
+              // Tabla de márgenes por producto
+              _buildProductMarginsTable(),
             ],
           ),
+        );
+      },
+    );
+  }
+
+  Widget _buildProductMarginsTable() {
+    final productsAsync = ref.watch(adminAllProductsProvider);
+    return productsAsync.when(
+      loading: () => const Center(child: Padding(
+        padding: EdgeInsets.all(16),
+        child: CircularProgressIndicator(),
+      )),
+      error: (err, _) => Text('Error: $err'),
+      data: (products) {
+        final productsWithCost = products.where((p) => p.costPrice != null && p.costPrice! > 0).toList();
+        if (productsWithCost.isEmpty) {
+          return const Padding(
+            padding: EdgeInsets.all(16),
+            child: Text('No hay productos con precio de coste asignado', style: TextStyle(color: Colors.grey)),
+          );
+        }
+        productsWithCost.sort((a, b) {
+          final marginA = (a.price - a.costPrice!) / a.price * 100;
+          final marginB = (b.price - b.costPrice!) / b.price * 100;
+          return marginB.compareTo(marginA);
+        });
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 24),
+            const Text(
+              'Análisis de Márgenes por Producto',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.amber),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Precio de venta vs coste de adquisición',
+              style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.grey[900],
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey[800]!),
+              ),
+              child: Column(
+                children: [
+                  // Header
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[850],
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                    ),
+                    child: const Row(
+                      children: [
+                        Expanded(flex: 3, child: Text('PRODUCTO', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey))),
+                        Expanded(flex: 2, child: Text('P. VENTA', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey), textAlign: TextAlign.right)),
+                        Expanded(flex: 2, child: Text('P. COSTE', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey), textAlign: TextAlign.right)),
+                        Expanded(flex: 2, child: Text('MARGEN', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey), textAlign: TextAlign.right)),
+                        Expanded(child: Text('STOCK', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey), textAlign: TextAlign.right)),
+                        Expanded(flex: 2, child: Text('INVERSIÓN', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey), textAlign: TextAlign.right)),
+                      ],
+                    ),
+                  ),
+                  // Rows
+                  ...productsWithCost.map((product) {
+                    final salePrice = product.price / 100;
+                    final costPrice = product.costPrice! / 100;
+                    final margin = (product.price - product.costPrice!) / product.price * 100;
+                    final investment = costPrice * product.stock;
+                    return Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        border: Border(bottom: BorderSide(color: Colors.grey[800]!)),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(flex: 3, child: Text(
+                            product.name.length > 30 ? '${product.name.substring(0, 30)}...' : product.name,
+                            style: const TextStyle(fontSize: 12),
+                            overflow: TextOverflow.ellipsis,
+                          )),
+                          Expanded(flex: 2, child: Text(
+                            '${salePrice.toStringAsFixed(2)} €',
+                            style: const TextStyle(fontSize: 12),
+                            textAlign: TextAlign.right,
+                          )),
+                          Expanded(flex: 2, child: Text(
+                            '${costPrice.toStringAsFixed(2)} €',
+                            style: const TextStyle(fontSize: 12),
+                            textAlign: TextAlign.right,
+                          )),
+                          Expanded(flex: 2, child: Text(
+                            '${margin.toStringAsFixed(1)}%',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: margin >= 30 ? Colors.green : margin >= 15 ? Colors.orange : Colors.red,
+                            ),
+                            textAlign: TextAlign.right,
+                          )),
+                          Expanded(child: Text(
+                            '${product.stock}',
+                            style: const TextStyle(fontSize: 12),
+                            textAlign: TextAlign.right,
+                          )),
+                          Expanded(flex: 2, child: Text(
+                            '${investment.toStringAsFixed(2)} €',
+                            style: const TextStyle(fontSize: 12),
+                            textAlign: TextAlign.right,
+                          )),
+                        ],
+                      ),
+                    );
+                  }),
+                ],
+              ),
+            ),
+          ],
         );
       },
     );

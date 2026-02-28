@@ -205,7 +205,7 @@ class _OrderCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     _StatusBadge(status: order.status),
-                    if (order.returnStatus != null) ...[
+                    if (order.returnStatus != null && order.status != 'refunded') ...[
                       const SizedBox(height: 4),
                       _ReturnStatusBadge(status: order.returnStatus!),
                     ],
@@ -614,13 +614,23 @@ class _OrderCard extends StatelessWidget {
     try {
       final pdf = pw.Document();
       final invoiceData = order.toInvoiceData();
+
+      // Cargar fuente con soporte completo de caracteres (incluido €)
+      final fontRegular = await PdfGoogleFonts.robotoRegular();
+      final fontBold = await PdfGoogleFonts.robotoBold();
+      final baseStyle = pw.TextStyle(font: fontRegular);
+      final boldStyle = pw.TextStyle(font: fontBold, fontWeight: pw.FontWeight.bold);
       final currencyFormat = NumberFormat.currency(locale: 'es_ES', symbol: '€');
 
+      // Filtrar items vacíos/fantasma (sin nombre o precio 0)
+      final validItems = (invoiceData['items'] as List)
+          .where((item) => (item['name'] as String?)?.isNotEmpty == true && (item['unitPrice'] as num) > 0)
+          .toList();
+
       // Precargar imágenes de productos
-      final items = invoiceData['items'] as List;
       final Map<int, pw.ImageProvider> productImages = {};
-      for (int i = 0; i < items.length; i++) {
-        final imageUrl = items[i]['image'] as String?;
+      for (int i = 0; i < validItems.length; i++) {
+        final imageUrl = validItems[i]['image'] as String?;
         if (imageUrl != null && imageUrl.isNotEmpty) {
           try {
             final netImage = await networkImage(imageUrl);
@@ -634,6 +644,7 @@ class _OrderCard extends StatelessWidget {
       pdf.addPage(
         pw.Page(
           pageFormat: PdfPageFormat.a4,
+          theme: pw.ThemeData.withFont(base: fontRegular, bold: fontBold),
           build: (pw.Context context) {
             return pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -646,16 +657,15 @@ class _OrderCard extends StatelessWidget {
                       crossAxisAlignment: pw.CrossAxisAlignment.start,
                       children: [
                         pw.Text('KICKSPREMIUM', 
-                          style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold)),
-                        pw.Text('Factura de Compra', style: const pw.TextStyle(color: PdfColors.grey)),
+                          style: boldStyle.copyWith(fontSize: 24)),
+                        pw.Text('Factura de Compra', style: baseStyle.copyWith(color: PdfColors.grey)),
                       ],
                     ),
                     pw.Column(
                       crossAxisAlignment: pw.CrossAxisAlignment.end,
                       children: [
-                        pw.Text('Factura: ${invoiceData['invoiceNumber']}', 
-                          style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                        pw.Text('Fecha: ${DateFormat('dd/MM/yyyy').format(order.createdAt)}'),
+                        pw.Text('Factura: ${invoiceData['invoiceNumber']}', style: boldStyle),
+                        pw.Text('Fecha: ${DateFormat('dd/MM/yyyy').format(order.createdAt)}', style: baseStyle),
                       ],
                     ),
                   ],
@@ -672,15 +682,14 @@ class _OrderCard extends StatelessWidget {
                   child: pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
-                      pw.Text('Datos del Cliente', 
-                        style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                      pw.Text('Datos del Cliente', style: boldStyle),
                       pw.SizedBox(height: 8),
-                      pw.Text('Nombre: ${invoiceData['customerName']}'),
-                      pw.Text('Email: ${invoiceData['customerEmail']}'),
-                      if (invoiceData['customerPhone'].isNotEmpty)
-                        pw.Text('Teléfono: ${invoiceData['customerPhone']}'),
-                      if (invoiceData['shippingAddress'].isNotEmpty)
-                        pw.Text('Dirección: ${invoiceData['shippingAddress']}'),
+                      pw.Text('Nombre: ${invoiceData['customerName']}', style: baseStyle),
+                      pw.Text('Email: ${invoiceData['customerEmail']}', style: baseStyle),
+                      if ((invoiceData['customerPhone'] as String).isNotEmpty)
+                        pw.Text('Tel\u00e9fono: ${invoiceData['customerPhone']}', style: baseStyle),
+                      if ((invoiceData['shippingAddress'] as String).isNotEmpty)
+                        pw.Text('Direcci\u00f3n: ${invoiceData['shippingAddress']}', style: baseStyle),
                     ],
                   ),
                 ),
@@ -693,66 +702,57 @@ class _OrderCard extends StatelessWidget {
                   child: pw.Row(
                     children: [
                       pw.SizedBox(width: 45),
-                      pw.Expanded(flex: 3, child: pw.Text('Producto', 
-                        style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
-                      pw.Expanded(child: pw.Text('Talla', 
-                        style: pw.TextStyle(fontWeight: pw.FontWeight.bold), 
-                        textAlign: pw.TextAlign.center)),
-                      pw.Expanded(child: pw.Text('Cant.', 
-                        style: pw.TextStyle(fontWeight: pw.FontWeight.bold), 
-                        textAlign: pw.TextAlign.center)),
-                      pw.Expanded(child: pw.Text('Precio', 
-                        style: pw.TextStyle(fontWeight: pw.FontWeight.bold), 
-                        textAlign: pw.TextAlign.right)),
-                      pw.Expanded(child: pw.Text('Total', 
-                        style: pw.TextStyle(fontWeight: pw.FontWeight.bold), 
-                        textAlign: pw.TextAlign.right)),
+                      pw.Expanded(flex: 3, child: pw.Text('Producto', style: boldStyle)),
+                      pw.Expanded(child: pw.Text('Talla', style: boldStyle, textAlign: pw.TextAlign.center)),
+                      pw.Expanded(child: pw.Text('Cant.', style: boldStyle, textAlign: pw.TextAlign.center)),
+                      pw.Expanded(child: pw.Text('Precio', style: boldStyle, textAlign: pw.TextAlign.right)),
+                      pw.Expanded(child: pw.Text('Total', style: boldStyle, textAlign: pw.TextAlign.right)),
                     ],
                   ),
                 ),
                 
-                // Items
-                ...((invoiceData['items'] as List).asMap().entries.map((entry) {
+                // Items (solo v\u00e1lidos)
+                ...(validItems.asMap().entries.map((entry) {
                   final idx = entry.key;
                   final item = entry.value;
                   return pw.Container(
-                  padding: const pw.EdgeInsets.symmetric(vertical: 6, horizontal: 10),
-                  decoration: const pw.BoxDecoration(
-                    border: pw.Border(bottom: pw.BorderSide(color: PdfColors.grey300)),
-                  ),
-                  child: pw.Row(
-                    children: [
-                      pw.SizedBox(
-                        width: 45,
-                        height: 45,
-                        child: productImages.containsKey(idx)
-                          ? pw.Image(productImages[idx]!, fit: pw.BoxFit.contain)
-                          : pw.Container(
-                              decoration: pw.BoxDecoration(
-                                color: PdfColors.grey200,
-                                borderRadius: pw.BorderRadius.circular(4),
+                    padding: const pw.EdgeInsets.symmetric(vertical: 6, horizontal: 10),
+                    decoration: const pw.BoxDecoration(
+                      border: pw.Border(bottom: pw.BorderSide(color: PdfColors.grey300)),
+                    ),
+                    child: pw.Row(
+                      children: [
+                        pw.SizedBox(
+                          width: 45,
+                          height: 45,
+                          child: productImages.containsKey(idx)
+                            ? pw.Image(productImages[idx]!, fit: pw.BoxFit.contain)
+                            : pw.Container(
+                                decoration: pw.BoxDecoration(
+                                  color: PdfColors.grey200,
+                                  borderRadius: pw.BorderRadius.circular(4),
+                                ),
+                                alignment: pw.Alignment.center,
+                                child: pw.Text('N/A', style: baseStyle.copyWith(fontSize: 8, color: PdfColors.grey)),
                               ),
-                              alignment: pw.Alignment.center,
-                              child: pw.Text('N/A', style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey)),
-                            ),
-                      ),
-                      pw.SizedBox(width: 6),
-                      pw.Expanded(flex: 3, child: pw.Column(
-                        crossAxisAlignment: pw.CrossAxisAlignment.start,
-                        children: [
-                          pw.Text(item['name'], style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                          pw.Text(item['brand'], style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey)),
-                        ],
-                      )),
-                      pw.Expanded(child: pw.Text(item['size'], textAlign: pw.TextAlign.center)),
-                      pw.Expanded(child: pw.Text('${item['quantity']}', textAlign: pw.TextAlign.center)),
-                      pw.Expanded(child: pw.Text(currencyFormat.format(item['unitPrice']), 
-                        textAlign: pw.TextAlign.right)),
-                      pw.Expanded(child: pw.Text(currencyFormat.format(item['total']), 
-                        textAlign: pw.TextAlign.right)),
-                    ],
-                  ),
-                );
+                        ),
+                        pw.SizedBox(width: 6),
+                        pw.Expanded(flex: 3, child: pw.Column(
+                          crossAxisAlignment: pw.CrossAxisAlignment.start,
+                          children: [
+                            pw.Text(item['name'] ?? '', style: boldStyle),
+                            pw.Text(item['brand'] ?? '', style: baseStyle.copyWith(fontSize: 10, color: PdfColors.grey)),
+                          ],
+                        )),
+                        pw.Expanded(child: pw.Text(item['size'] ?? '', style: baseStyle, textAlign: pw.TextAlign.center)),
+                        pw.Expanded(child: pw.Text('${item['quantity']}', style: baseStyle, textAlign: pw.TextAlign.center)),
+                        pw.Expanded(child: pw.Text(currencyFormat.format(item['unitPrice']), 
+                          style: baseStyle, textAlign: pw.TextAlign.right)),
+                        pw.Expanded(child: pw.Text(currencyFormat.format(item['total']), 
+                          style: baseStyle, textAlign: pw.TextAlign.right)),
+                      ],
+                    ),
+                  );
                 })),
                 
                 pw.SizedBox(height: 20),
@@ -764,13 +764,13 @@ class _OrderCard extends StatelessWidget {
                     crossAxisAlignment: pw.CrossAxisAlignment.end,
                     children: [
                       if ((invoiceData['discount'] as double) > 0) ...[
-                        pw.Text('Subtotal: ${currencyFormat.format(invoiceData['subtotal'] + invoiceData['discount'])}'),
+                        pw.Text('Subtotal: ${currencyFormat.format(invoiceData['subtotal'] + invoiceData['discount'])}', style: baseStyle),
                         pw.Text('Descuento (${invoiceData['discountCode']}): -${currencyFormat.format(invoiceData['discount'])}',
-                          style: const pw.TextStyle(color: PdfColors.green)),
+                          style: baseStyle.copyWith(color: PdfColors.green)),
                       ],
                       pw.SizedBox(height: 8),
                       pw.Text('TOTAL: ${currencyFormat.format(invoiceData['total'])}',
-                        style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
+                        style: boldStyle.copyWith(fontSize: 18)),
                     ],
                   ),
                 ),
@@ -786,11 +786,10 @@ class _OrderCard extends StatelessWidget {
                   ),
                   child: pw.Column(
                     children: [
-                      pw.Text('¡Gracias por tu compra!', 
-                        style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                      pw.Text('\u00a1Gracias por tu compra!', style: boldStyle),
                       pw.SizedBox(height: 5),
-                      pw.Text('Si tienes alguna pregunta, contáctanos en support@kickspremium.com',
-                        style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey)),
+                      pw.Text('Si tienes alguna pregunta, cont\u00e1ctanos en support@kickspremium.com',
+                        style: baseStyle.copyWith(fontSize: 10, color: PdfColors.grey)),
                     ],
                   ),
                 ),
