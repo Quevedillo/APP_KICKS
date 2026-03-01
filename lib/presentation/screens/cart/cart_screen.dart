@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../logic/providers.dart';
+import '../../../utils/vat_helper.dart';
 
 class CartScreen extends ConsumerWidget {
   const CartScreen({super.key});
@@ -127,7 +128,7 @@ class CartScreen extends ConsumerWidget {
                       ),
                     ),
                     Text(
-                      currencyFormat.format(cartTotal / 100),
+                      currencyFormat.format(VatHelper.priceWithVat(cartTotal) / 100),
                       style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
@@ -316,7 +317,7 @@ class _CartItemCard extends StatelessWidget {
 
                 // Price
                 Text(
-                  currencyFormat.format(product.price / 100),
+                  currencyFormat.format(product.effectivePriceWithVat / 100),
                   style: TextStyle(
                     color: Theme.of(context).primaryColor,
                     fontWeight: FontWeight.bold,

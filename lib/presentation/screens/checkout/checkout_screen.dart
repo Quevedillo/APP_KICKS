@@ -1077,7 +1077,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen>
             ),
           ),
           Text(
-            format.format(item.totalPrice / 100),
+            format.format(VatHelper.priceWithVat(item.totalPrice) / 100),
             style: TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 16,

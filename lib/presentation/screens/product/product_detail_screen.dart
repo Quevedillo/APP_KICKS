@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../data/models/product.dart';
 import '../../../logic/providers.dart';
+import '../../../utils/vat_helper.dart';
 import '../../widgets/size_recommender.dart';
 
 final productBySlugProvider = FutureProvider.family<Product?, String>((ref, slug) async {
@@ -73,7 +74,8 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
           }
 
           final currencyFormat = NumberFormat.currency(locale: 'es_ES', symbol: '€');
-          final price = currencyFormat.format(product.price / 100);
+          final price = currencyFormat.format(product.effectivePriceWithVat / 100);
+          final cartItems = ref.watch(cartProvider);
           
           // Filtrar solo tallas con stock disponible
           final availableSizes = product.sizesAvailable.entries
@@ -239,7 +241,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                                 ),
                                 if (product.comparePrice != null && product.comparePrice! > product.price)
                                   Text(
-                                    currencyFormat.format(product.comparePrice! / 100),
+                                    currencyFormat.format(VatHelper.priceWithVat(product.comparePrice!) / 100),
                                     style: const TextStyle(
                                       color: Colors.grey,
                                       decoration: TextDecoration.lineThrough,
@@ -397,7 +399,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                                   const Icon(Icons.info_outline, color: Colors.blue, size: 16),
                                   const SizedBox(width: 8),
                                   Text(
-                                    'Talla $_selectedSize - ${_getStockForSize(product, _selectedSize!)} pares disponibles',
+                                    'Talla $_selectedSize - ${_getAvailableStock(product, _selectedSize!, cartItems)} pares disponibles',
                                     style: const TextStyle(color: Colors.blue, fontSize: 13),
                                   ),
                                 ],
@@ -445,7 +447,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                                       ),
                                       IconButton(
                                         icon: const Icon(Icons.add),
-                                        onPressed: _quantity < _getStockForSize(product, _selectedSize!)
+                                        onPressed: _quantity < _getAvailableStock(product, _selectedSize!, cartItems)
                                             ? () => setState(() => _quantity++)
                                             : null,
                                       ),
@@ -454,7 +456,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                                 ),
                                 const SizedBox(width: 12),
                                 Text(
-                                  'Máx: ${_getStockForSize(product, _selectedSize!)}',
+                                  'Máx: ${_getAvailableStock(product, _selectedSize!, cartItems)}',
                                   style: const TextStyle(color: Colors.grey, fontSize: 12),
                                 ),
                               ],
@@ -605,6 +607,16 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
     return 0;
   }
 
+  /// Stock disponible descontando lo que ya hay en el carrito
+  int _getAvailableStock(Product product, String size, List<dynamic> cartItems) {
+    final totalStock = _getStockForSize(product, size);
+    final inCart = cartItems
+        .where((item) => item.productId == product.id && item.size == size)
+        .fold<int>(0, (sum, item) => sum + (item.quantity as int));
+    final available = totalStock - inCart;
+    return available < 0 ? 0 : available;
+  }
+
   void _handleAddToCart(BuildContext context, Product product, bool isLoggedIn) {
     if (!isLoggedIn) {
       context.push('/login?redirect=/product/${widget.slug}');
@@ -616,15 +628,18 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
         const SnackBar(
           content: Text('Por favor, selecciona una talla'),
           backgroundColor: Colors.orange,
+          duration: Duration(seconds: 3),
         ),
       );
       return;
     }
 
     ref.read(cartProvider.notifier).addItem(product, _selectedSize!, _quantity);
+    setState(() => _quantity = 1);
     
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
+        duration: const Duration(seconds: 3),
         content: Row(
           children: [
             const Icon(Icons.check_circle, color: Colors.white),
