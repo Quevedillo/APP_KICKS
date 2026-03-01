@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
@@ -106,6 +106,33 @@ class StripeService {
         paymentIntentClientSecret: clientSecret,
         merchantDisplayName: merchantName,
         billingDetails: BillingDetails(email: email),
+        appearance: const PaymentSheetAppearance(
+          colors: PaymentSheetAppearanceColors(
+            background: Color(0xFF0A0A0A),
+            primary: Color(0xFFFF3131),
+            componentBackground: Color(0xFF1C1C1C),
+            componentText: Color(0xFFFFFFFF),
+            placeholderText: Color(0xFF9E9E9E),
+            primaryText: Color(0xFFFFFFFF),
+            secondaryText: Color(0xFF9E9E9E),
+            componentBorder: Color(0xFF2C2C2C),
+            icon: Color(0xFFFFFFFF),
+          ),
+          shapes: PaymentSheetShape(
+            borderRadius: 12,
+            borderWidth: 0.5,
+          ),
+          primaryButton: PaymentSheetPrimaryButtonAppearance(
+            colors: PaymentSheetPrimaryButtonTheme(
+              dark: PaymentSheetPrimaryButtonThemeColors(
+                background: Color(0xFFFF3131),
+                text: Color(0xFFFFFFFF),
+                border: Color(0xFFFF3131),
+              ),
+            ),
+            shapes: const PaymentSheetPrimaryButtonShape(),
+          ),
+        ),
       );
       
       await Stripe.instance.initPaymentSheet(

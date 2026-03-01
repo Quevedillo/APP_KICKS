@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../data/models/product.dart';
 import '../../../logic/providers.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../utils/vat_helper.dart';
 import '../../widgets/size_recommender.dart';
 
@@ -328,7 +329,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                                 icon: const Icon(Icons.straighten, size: 16),
                                 label: const Text('¿No sabes tu talla?'),
                                 style: TextButton.styleFrom(
-                                  foregroundColor: Colors.amber,
+                                  foregroundColor: AppTheme.accent,
                                   textStyle: const TextStyle(fontSize: 12),
                                 ),
                               ),
@@ -341,43 +342,57 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                             children: availableSizes.map((size) {
                               final isSelected = _selectedSize == size;
                               final stock = _getStockForSize(product, size);
+                              final availableStock = _getAvailableStock(product, size, cartItems);
+                              final isDisabled = availableStock <= 0;
                               
                               return GestureDetector(
-                                onTap: () {
+                                onTap: isDisabled ? null : () {
                                   setState(() {
                                     _selectedSize = size;
                                     _quantity = 1;
                                   });
                                 },
-                                child: Container(
-                                  width: 60,
-                                  padding: const EdgeInsets.symmetric(vertical: 12),
-                                  decoration: BoxDecoration(
-                                    color: isSelected
-                                        ? Theme.of(context).primaryColor
-                                        : const Color(0xFF1C1C1C),
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: isSelected
-                                        ? Border.all(color: Colors.orange, width: 2)
-                                        : null,
-                                  ),
-                                  child: Column(
-                                    children: [
-                                      Text(
-                                        size,
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          color: isSelected ? Colors.white : Colors.white70,
+                                child: Opacity(
+                                  opacity: isDisabled ? 0.4 : 1.0,
+                                  child: Container(
+                                    width: 60,
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                    decoration: BoxDecoration(
+                                      color: isDisabled
+                                          ? const Color(0xFF1C1C1C)
+                                          : isSelected
+                                              ? Theme.of(context).primaryColor
+                                              : const Color(0xFF1C1C1C),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: isSelected && !isDisabled
+                                          ? Border.all(color: AppTheme.accent, width: 2)
+                                          : isDisabled
+                                              ? Border.all(color: Colors.grey.withOpacity(0.3), width: 1)
+                                              : null,
+                                    ),
+                                    child: Column(
+                                      children: [
+                                        Text(
+                                          size,
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            color: isDisabled
+                                                ? Colors.grey
+                                                : isSelected ? Colors.white : Colors.white70,
+                                            decoration: isDisabled ? TextDecoration.lineThrough : null,
+                                          ),
                                         ),
-                                      ),
-                                      Text(
-                                        '($stock)',
-                                        style: TextStyle(
-                                          fontSize: 10,
-                                          color: isSelected ? Colors.white70 : Colors.grey,
+                                        Text(
+                                          isDisabled ? 'En carrito' : '($stock)',
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            color: isDisabled
+                                                ? Colors.grey[600]
+                                                : isSelected ? Colors.white70 : Colors.grey,
+                                          ),
                                         ),
-                                      ),
-                                    ],
+                                      ],
+                                    ),
                                   ),
                                 ),
                               );
@@ -390,17 +405,17 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                             Container(
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: Colors.blue.withOpacity(0.1),
+                                color: AppTheme.accent.withOpacity(0.1),
                                 borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: Colors.blue.withOpacity(0.3)),
+                                border: Border.all(color: AppTheme.accent.withOpacity(0.3)),
                               ),
                               child: Row(
                                 children: [
-                                  const Icon(Icons.info_outline, color: Colors.blue, size: 16),
+                                  const Icon(Icons.info_outline, color: AppTheme.accent, size: 16),
                                   const SizedBox(width: 8),
                                   Text(
                                     'Talla $_selectedSize - ${_getAvailableStock(product, _selectedSize!, cartItems)} pares disponibles',
-                                    style: const TextStyle(color: Colors.blue, fontSize: 13),
+                                    style: const TextStyle(color: AppTheme.accent, fontSize: 13),
                                   ),
                                 ],
                               ),
@@ -510,40 +525,6 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
 
                         const SizedBox(height: 24),
 
-                        // Auth warning if not logged in
-                        if (!isLoggedIn && hasAvailableSizes)
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            margin: const EdgeInsets.only(bottom: 16),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF1C1C1C),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: Theme.of(context).primaryColor.withOpacity(0.3)),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(Icons.info_outline, 
-                                  color: Theme.of(context).primaryColor, 
-                                  size: 18,
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    'Inicia sesión para añadir al carrito',
-                                    style: TextStyle(
-                                      color: Colors.grey[300],
-                                      fontSize: 13,
-                                    ),
-                                  ),
-                                ),
-                                TextButton(
-                                  onPressed: () => context.push('/login?redirect=/product/${widget.slug}'),
-                                  child: const Text('ENTRAR'),
-                                ),
-                              ],
-                            ),
-                          ),
-
                         // Add to cart button
                         SizedBox(
                           width: double.infinity,
@@ -618,11 +599,6 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
   }
 
   void _handleAddToCart(BuildContext context, Product product, bool isLoggedIn) {
-    if (!isLoggedIn) {
-      context.push('/login?redirect=/product/${widget.slug}');
-      return;
-    }
-
     if (_selectedSize == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
