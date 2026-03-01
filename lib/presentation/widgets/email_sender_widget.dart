@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/repositories/email_repository.dart';
 import '../../data/repositories/admin_email_functions.dart';
@@ -73,7 +74,7 @@ mixin EmailMixin {
     required String subject,
     required String htmlBody,
   }) async {
-    final emailRepo = EmailRepository();
+    final emailRepo = EmailRepository(Supabase.instance.client);
     final result = await emailRepo.sendNewsletter([to], subject, htmlBody);
     return (result['successful'] ?? 0) > 0;
   }
@@ -82,7 +83,7 @@ mixin EmailMixin {
     required String email,
     required String name,
   }) async {
-    final emailRepo = EmailRepository();
+    final emailRepo = EmailRepository(Supabase.instance.client);
     return emailRepo.sendWelcome(email, name);
   }
 
@@ -92,7 +93,7 @@ mixin EmailMixin {
     required double total,
     required List<Map<String, dynamic>> items,
   }) async {
-    final emailRepo = EmailRepository();
+    final emailRepo = EmailRepository(Supabase.instance.client);
     return emailRepo.sendOrderConfirmation(email, orderId, total, items);
   }
 }
@@ -165,7 +166,7 @@ Future<void> showEmailDialog(BuildContext context) {
               return;
             }
 
-            final emailRepo = EmailRepository();
+            final emailRepo = EmailRepository(Supabase.instance.client);
             final result = await emailRepo.sendNewsletter(
               [recipientController.text],
               subjectController.text,
@@ -204,7 +205,7 @@ class EmailService {
 
   EmailService._();
 
-  final _emailRepo = EmailRepository();
+  final _emailRepo = EmailRepository(Supabase.instance.client);
   final _adminFunctions = AdminEmailFunctions();
 
   Future<bool> sendWelcome(String email, String name) =>
@@ -355,7 +356,7 @@ class EmailBuilder {
       throw Exception('Email incompleto');
     }
 
-    final emailRepo = EmailRepository();
+    final emailRepo = EmailRepository(Supabase.instance.client);
     return emailRepo.sendNewsletter(_recipients, _subject, _htmlContent);
   }
 }

@@ -1,28 +1,20 @@
-class Category {
-  final String id;
-  final String name;
-  final String slug;
-  final String? description;
-  final String? icon;
-  final int displayOrder;
+import 'package:freezed_annotation/freezed_annotation.dart';
 
-  Category({
-    required this.id,
-    required this.name,
-    required this.slug,
-    this.description,
-    this.icon,
-    required this.displayOrder,
-  });
+part 'category.freezed.dart';
+part 'category.g.dart';
 
-  factory Category.fromJson(Map<String, dynamic> json) {
-    return Category(
-      id: json['id'] as String,
-      name: json['name'] as String,
-      slug: json['slug'] as String,
-      description: json['description'] as String?,
-      icon: json['icon'] as String?,
-      displayOrder: ((json['display_order'] as num?) ?? 0).toInt(),
-    );
-  }
+@freezed
+abstract class Category with _$Category {
+  @JsonSerializable(fieldRename: FieldRename.snake)
+  const factory Category({
+    required String id,
+    required String name,
+    required String slug,
+    String? description,
+    String? icon,
+    @Default(0) int displayOrder,
+  }) = _Category;
+
+  factory Category.fromJson(Map<String, dynamic> json) =>
+      _$CategoryFromJson(json);
 }

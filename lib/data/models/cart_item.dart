@@ -1,68 +1,36 @@
+import 'package:freezed_annotation/freezed_annotation.dart';
 import 'product.dart';
 
-class CartItem {
-  final String productId;
-  final Product product;
-  final int quantity;
-  final String size;
+part 'cart_item.freezed.dart';
+part 'cart_item.g.dart';
 
-  CartItem({
-    required this.productId,
-    required this.product,
-    required this.quantity,
-    required this.size,
-  });
+@freezed
+abstract class CartItem with _$CartItem {
+  const CartItem._(); // Para getters computados
 
-  CartItem copyWith({
-    String? productId,
-    Product? product,
-    int? quantity,
-    String? size,
-  }) {
-    return CartItem(
-      productId: productId ?? this.productId,
-      product: product ?? this.product,
-      quantity: quantity ?? this.quantity,
-      size: size ?? this.size,
-    );
-  }
+  @JsonSerializable(explicitToJson: true)
+  const factory CartItem({
+    required Product product,
+    required int quantity,
+    required String size,
+  }) = _CartItem;
 
-  Map<String, dynamic> toJson() {
-    return {
-      'product_id': productId,
-      'product': product.toJson(),
-      'quantity': quantity,
-      'size': size,
-    };
-  }
+  factory CartItem.fromJson(Map<String, dynamic> json) =>
+      _$CartItemFromJson(json);
 
-  factory CartItem.fromJson(Map<String, dynamic> json) {
-    return CartItem(
-      productId: json['product_id'] as String,
-      product: Product.fromJson(json['product'] as Map<String, dynamic>),
-      quantity: (json['quantity'] as num).toInt(),
-      size: json['size'] as String,
-    );
-  }
+  // ─── Convenience getters ──────────────────────────────────────────
 
-  int get totalPrice => product.price * quantity;
+  /// Shortcut to product.id – used widely in cart/order code.
+  String get productId => product.id;
 
-  // Obtener stock disponible para esta talla
+  /// Total price for this line item (cents, base without VAT)
+  int get totalPrice => product.effectivePrice * quantity;
+
+  /// Available stock for the selected size
   int get availableStock {
-    final stock = product.sizesAvailable[size];
-    if (stock is int) return stock;
-    if (stock is String) return int.tryParse(stock) ?? 0;
+    final sizeData = product.sizesAvailable[size];
+    if (sizeData is int) return sizeData;
+    if (sizeData is Map) return (sizeData['stock'] as num?)?.toInt() ?? 0;
     return 0;
   }
-
-  @override
-  bool operator ==(Object other) {
-    if (identical(this, other)) return true;
-    return other is CartItem && 
-           other.productId == productId && 
-           other.size == size;
-  }
-
-  @override
-  int get hashCode => productId.hashCode ^ size.hashCode;
 }

@@ -1,5 +1,8 @@
+import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/discount_code.dart';
+
+part 'discount_repository.freezed.dart';
 
 class DiscountRepository {
   final SupabaseClient _client;
@@ -185,16 +188,12 @@ class DiscountRepository {
   }
 }
 
-class DiscountValidationResult {
-  final bool valid;
-  final String? error;
-  final DiscountCode? discountCode;
-  final int? discountAmount;
-
-  DiscountValidationResult({
-    required this.valid,
-    this.error,
-    this.discountCode,
-    this.discountAmount,
-  });
+@freezed
+abstract class DiscountValidationResult with _$DiscountValidationResult {
+  const factory DiscountValidationResult({
+    required bool valid,
+    String? error,
+    DiscountCode? discountCode,
+    int? discountAmount,
+  }) = _DiscountValidationResult;
 }

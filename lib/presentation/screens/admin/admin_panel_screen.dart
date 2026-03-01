@@ -18,6 +18,7 @@ import 'package:printing/printing.dart';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:image/image.dart' as img;
+import '../../../data/services/cloudinary_service.dart';
 
 
 class AdminPanelScreen extends ConsumerStatefulWidget {
@@ -3606,17 +3607,32 @@ class _ProductFormDialogState extends ConsumerState<_ProductFormDialog> {
         final tempFile = File('${tempDir.path}/prod_${DateTime.now().millisecondsSinceEpoch}.jpg');
         await tempFile.writeAsBytes(encoded, flush: true);
 
-        final fileName = 'products/${DateTime.now().millisecondsSinceEpoch}_${file.path.split('/').last}';
+        final fileName = 'prod_${DateTime.now().millisecondsSinceEpoch}.jpg';
         try {
-          await supabase.storage.from('product-images').upload(fileName, tempFile);
-          final url = supabase.storage.from('product-images').getPublicUrl(fileName);
-          uploadedUrls.add(url);
-        } catch (storageErr) {
-          print('âš ï¸ Error subiendo imagen: $storageErr');
+          final cloudinaryUrl = await CloudinaryService.uploadBytes(
+            encoded,
+            folder: 'products',
+            fileName: fileName,
+          );
+          if (cloudinaryUrl != null) {
+            uploadedUrls.add(cloudinaryUrl);
+          } else {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Error al subir imagen a Cloudinary.'),
+                  backgroundColor: Colors.orange,
+                  duration: Duration(seconds: 3),
+                ),
+              );
+            }
+          }
+        } catch (uploadErr) {
+          print('⚠️ Error subiendo imagen: $uploadErr');
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('Error al subir imagen. Crea el bucket "product-images" en Supabase Storage con acceso público.'),
+                content: Text('Error al subir imagen: $uploadErr'),
                 backgroundColor: Colors.orange,
                 duration: const Duration(seconds: 5),
               ),

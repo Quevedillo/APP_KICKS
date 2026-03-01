@@ -1,3 +1,4 @@
+import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -14,6 +15,8 @@ import '../data/models/order.dart';
 import '../data/models/cart_item.dart';
 import '../data/models/user_profile.dart';
 import '../data/models/discount_code.dart';
+
+part 'providers.freezed.dart';
 
 // ========== Clients ==========
 final supabaseClientProvider = Provider<SupabaseClient>((ref) {
@@ -35,18 +38,11 @@ final orderRepositoryProvider = Provider<OrderRepository>((ref) {
 
 
 final emailRepositoryProvider = Provider<EmailRepository>((ref) {
-  return EmailRepository();
-});
-
-/// Cliente Supabase con service_role key para operaciones de admin (bypasa RLS)
-final supabaseServiceRoleProvider = Provider<SupabaseClient>((ref) {
-  final url = dotenv.env['PUBLIC_SUPABASE_URL'] ?? '';
-  final serviceKey = dotenv.env['SUPABASE_SERVICE_ROLE_KEY'] ?? '';
-  return SupabaseClient(url, serviceKey);
+  return EmailRepository(ref.watch(supabaseClientProvider));
 });
 
 final adminRepositoryProvider = Provider<AdminRepository>((ref) {
-  return AdminRepository(ref.watch(supabaseServiceRoleProvider));
+  return AdminRepository(ref.watch(supabaseClientProvider));
 });
 
 final discountRepositoryProvider = Provider<DiscountRepository>((ref) {
@@ -117,63 +113,18 @@ final filteredProductsProvider = FutureProvider.family<List<Product>, ProductFil
   },
 );
 
-class ProductFilter {
-  final String? brand;
-  final String? categoryId;
-  final String? color;
-  final int? minPriceCents;
-  final int? maxPriceCents;
-  final String sortBy;
-  final String? searchQuery;
-
-  const ProductFilter({
-    this.brand,
-    this.categoryId,
-    this.color,
-    this.minPriceCents,
-    this.maxPriceCents,
-    this.sortBy = 'newest',
-    this.searchQuery,
-  });
-
-  ProductFilter copyWith({
-    Object? brand = _sentinel,
-    Object? categoryId = _sentinel,
-    Object? color = _sentinel,
-    Object? minPriceCents = _sentinel,
-    Object? maxPriceCents = _sentinel,
-    String? sortBy,
-    Object? searchQuery = _sentinel,
-  }) {
-    return ProductFilter(
-      brand: brand == _sentinel ? this.brand : brand as String?,
-      categoryId: categoryId == _sentinel ? this.categoryId : categoryId as String?,
-      color: color == _sentinel ? this.color : color as String?,
-      minPriceCents: minPriceCents == _sentinel ? this.minPriceCents : minPriceCents as int?,
-      maxPriceCents: maxPriceCents == _sentinel ? this.maxPriceCents : maxPriceCents as int?,
-      sortBy: sortBy ?? this.sortBy,
-      searchQuery: searchQuery == _sentinel ? this.searchQuery : searchQuery as String?,
-    );
-  }
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is ProductFilter &&
-          brand == other.brand &&
-          categoryId == other.categoryId &&
-          color == other.color &&
-          minPriceCents == other.minPriceCents &&
-          maxPriceCents == other.maxPriceCents &&
-          sortBy == other.sortBy &&
-          searchQuery == other.searchQuery;
-
-  @override
-  int get hashCode => Object.hash(
-        brand, categoryId, color, minPriceCents, maxPriceCents, sortBy, searchQuery);
+@freezed
+abstract class ProductFilter with _$ProductFilter {
+  const factory ProductFilter({
+    String? brand,
+    String? categoryId,
+    String? color,
+    int? minPriceCents,
+    int? maxPriceCents,
+    @Default('newest') String sortBy,
+    String? searchQuery,
+  }) = _ProductFilter;
 }
-
-const _sentinel = Object();
 
 
 /// Productos en oferta (con descuento activo)
@@ -249,7 +200,6 @@ class CartNotifier extends Notifier<List<CartItem>> {
       state = [
         ...state,
         CartItem(
-          productId: product.id,
           product: product,
           quantity: finalQuantity,
           size: size,

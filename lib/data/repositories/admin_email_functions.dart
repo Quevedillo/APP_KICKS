@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../repositories/email_repository.dart';
 
 // Provider para las funciones del admin
@@ -7,7 +8,7 @@ final adminEmailFunctionsProvider = Provider<AdminEmailFunctions>((ref) {
 });
 
 class AdminEmailFunctions {
-  final _emailRepository = EmailRepository();
+  final _emailRepository = EmailRepository(Supabase.instance.client);
 
   /// Enviar newsletter a múltiples usuarios
   Future<Map<String, int>> sendNewsletter({

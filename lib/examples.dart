@@ -2,6 +2,7 @@
 // Este archivo contiene ejemplos prácticos de cómo usar todas las funciones
 
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'data/repositories/email_repository.dart';
 import 'data/repositories/admin_email_functions.dart';
@@ -12,7 +13,7 @@ import 'logic/providers.dart';
 // ============================================
 
 Future<void> example1_sendWelcomeEmail() async {
-  final emailRepo = EmailRepository();
+  final emailRepo = EmailRepository(Supabase.instance.client);
   
   await emailRepo.sendWelcome(
     'juan@example.com',
@@ -27,7 +28,7 @@ Future<void> example1_sendWelcomeEmail() async {
 // ============================================
 
 Future<void> example2_sendOrderConfirmation() async {
-  final emailRepo = EmailRepository();
+  final emailRepo = EmailRepository(Supabase.instance.client);
   
   final items = [
     {
@@ -59,7 +60,7 @@ Future<void> example2_sendOrderConfirmation() async {
 // ============================================
 
 Future<void> example3_notifyAdminNewOrder() async {
-  final emailRepo = EmailRepository();
+  final emailRepo = EmailRepository(Supabase.instance.client);
   
   final items = [
     {
@@ -85,7 +86,7 @@ Future<void> example3_notifyAdminNewOrder() async {
 // ============================================
 
 Future<void> example4_sendOrderStatusUpdate() async {
-  final emailRepo = EmailRepository();
+  final emailRepo = EmailRepository(Supabase.instance.client);
   
   await emailRepo.sendOrderStatusUpdate(
     'cliente@example.com',
@@ -102,7 +103,7 @@ Future<void> example4_sendOrderStatusUpdate() async {
 // ============================================
 
 Future<void> example5_sendNewsletter() async {
-  final emailRepo = EmailRepository();
+  final emailRepo = EmailRepository(Supabase.instance.client);
   
   final recipients = [
     'user1@example.com',
@@ -129,7 +130,7 @@ Future<void> example5_sendNewsletter() async {
 // ============================================
 
 Future<void> example6_sendPasswordReset() async {
-  final emailRepo = EmailRepository();
+  final emailRepo = EmailRepository(Supabase.instance.client);
   
   await emailRepo.sendPasswordReset(
     'usuario@example.com',
@@ -145,7 +146,7 @@ Future<void> example6_sendPasswordReset() async {
 // ============================================
 
 Future<void> example7_sendContactForm() async {
-  final emailRepo = EmailRepository();
+  final emailRepo = EmailRepository(Supabase.instance.client);
   
   await emailRepo.sendContactForm(
     'Juan García',
@@ -162,7 +163,7 @@ Future<void> example7_sendContactForm() async {
 // ============================================
 
 Future<void> example8_sendProblemReport() async {
-  final emailRepo = EmailRepository();
+  final emailRepo = EmailRepository(Supabase.instance.client);
   
   await emailRepo.sendProblemReport(
     'usuario@example.com',
@@ -340,7 +341,7 @@ class EmailExampleWidget extends ConsumerWidget {
 // ============================================
 
 Future<void> example15_completePurchaseFlow() async {
-  final emailRepo = EmailRepository();
+  final emailRepo = EmailRepository(Supabase.instance.client);
   
   // 1. Enviar confirmación al cliente
   await emailRepo.sendOrderConfirmation(

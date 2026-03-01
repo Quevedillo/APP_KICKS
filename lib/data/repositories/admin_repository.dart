@@ -1,7 +1,5 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart' hide Category;
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/order.dart';
 import '../models/product.dart';
@@ -668,39 +666,21 @@ class AdminRepository {
     }
   }
 
-  /// Obtiene IDs de usuarios baneados desde Auth Admin API
+  /// Obtiene IDs de usuarios baneados vía Edge Function
   Future<Set<String>> _getBannedUserIds() async {
     try {
-      final url = dotenv.env['PUBLIC_SUPABASE_URL'] ?? '';
-      final serviceKey = dotenv.env['SUPABASE_SERVICE_ROLE_KEY'] ?? '';
-      if (url.isEmpty || serviceKey.isEmpty) return {};
-
-      final response = await http.get(
-        Uri.parse('$url/auth/v1/admin/users?per_page=1000'),
-        headers: {
-          'Authorization': 'Bearer $serviceKey',
-          'apikey': serviceKey,
-        },
+      final response = await _client.functions.invoke(
+        'admin-auth',
+        body: {'action': 'get-banned'},
       );
 
-      if (response.statusCode == 200) {
-        final body = jsonDecode(response.body);
-        final users = body['users'] as List? ?? [];
-        final Set<String> banned = {};
-        for (final u in users) {
-          final bannedUntil = u['banned_until'] as String?;
-          if (bannedUntil != null && bannedUntil != '0001-01-01T00:00:00Z') {
-            final until = DateTime.tryParse(bannedUntil);
-            if (until != null && until.isAfter(DateTime.now())) {
-              banned.add(u['id'] as String);
-            }
-          }
-        }
-        return banned;
+      if (response.status == 200 && response.data is Map) {
+        final bannedIds = (response.data['bannedIds'] as List?) ?? [];
+        return bannedIds.map((id) => id.toString()).toSet();
       }
       return {};
     } catch (e) {
-      debugPrint('⚠️ Error fetching auth users: $e');
+      debugPrint('⚠️ Error fetching banned users: $e');
       return {};
     }
   }
@@ -719,71 +699,42 @@ class AdminRepository {
     }
   }
 
-  /// Banea (deshabilita) un usuario via Auth Admin API
+  /// Banea (deshabilita) un usuario vía Edge Function
   Future<bool> banUser(String userId) async {
     try {
-      final url = dotenv.env['PUBLIC_SUPABASE_URL'] ?? '';
-      final serviceKey = dotenv.env['SUPABASE_SERVICE_ROLE_KEY'] ?? '';
-
-      final response = await http.put(
-        Uri.parse('$url/auth/v1/admin/users/$userId'),
-        headers: {
-          'Authorization': 'Bearer $serviceKey',
-          'apikey': serviceKey,
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({'ban_duration': '876000h'}),
+      final response = await _client.functions.invoke(
+        'admin-auth',
+        body: {'action': 'ban', 'userId': userId},
       );
-
-      return response.statusCode == 200;
+      return response.status == 200;
     } catch (e) {
       debugPrint('❌ Error banning user: $e');
       return false;
     }
   }
 
-  /// Desbanea (habilita) un usuario via Auth Admin API
+  /// Desbanea (habilita) un usuario vía Edge Function
   Future<bool> unbanUser(String userId) async {
     try {
-      final url = dotenv.env['PUBLIC_SUPABASE_URL'] ?? '';
-      final serviceKey = dotenv.env['SUPABASE_SERVICE_ROLE_KEY'] ?? '';
-
-      final response = await http.put(
-        Uri.parse('$url/auth/v1/admin/users/$userId'),
-        headers: {
-          'Authorization': 'Bearer $serviceKey',
-          'apikey': serviceKey,
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({'ban_duration': 'none'}),
+      final response = await _client.functions.invoke(
+        'admin-auth',
+        body: {'action': 'unban', 'userId': userId},
       );
-
-      return response.statusCode == 200;
+      return response.status == 200;
     } catch (e) {
       debugPrint('❌ Error unbanning user: $e');
       return false;
     }
   }
 
-  /// Elimina un usuario completamente (user_profiles + auth.users)
+  /// Elimina un usuario completamente vía Edge Function
   Future<bool> deleteUser(String userId) async {
     try {
-      // 1. Eliminar de user_profiles primero (FK constraint)
-      await _client.from('user_profiles').delete().eq('id', userId);
-
-      // 2. Eliminar de auth.users via Admin API
-      final url = dotenv.env['PUBLIC_SUPABASE_URL'] ?? '';
-      final serviceKey = dotenv.env['SUPABASE_SERVICE_ROLE_KEY'] ?? '';
-
-      final response = await http.delete(
-        Uri.parse('$url/auth/v1/admin/users/$userId'),
-        headers: {
-          'Authorization': 'Bearer $serviceKey',
-          'apikey': serviceKey,
-        },
+      final response = await _client.functions.invoke(
+        'admin-auth',
+        body: {'action': 'delete', 'userId': userId},
       );
-
-      return response.statusCode == 200;
+      return response.status == 200;
     } catch (e) {
       debugPrint('❌ Error deleting user: $e');
       return false;

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -15,18 +15,16 @@ Future<void> main() async {
   await initializeDateFormatting('es_ES', null);
   
   try {
-    await dotenv.load(fileName: "assets/env");
+    const supabaseUrl = String.fromEnvironment('PUBLIC_SUPABASE_URL');
+    const supabaseKey = String.fromEnvironment('PUBLIC_SUPABASE_ANON_KEY');
 
-    final supabaseUrl = dotenv.env['PUBLIC_SUPABASE_URL'];
-    final supabaseKey = dotenv.env['PUBLIC_SUPABASE_ANON_KEY'];
-
-    if (supabaseUrl != null && supabaseKey != null && supabaseUrl.isNotEmpty && supabaseKey.isNotEmpty) {
+    if (supabaseUrl.isNotEmpty && supabaseKey.isNotEmpty) {
       await Supabase.initialize(
         url: supabaseUrl,
         anonKey: supabaseKey,
       );
     } else {
-      print('❌ Warning: Supabase credentials not found in assets/env');
+      print('❌ Warning: Supabase credentials not found. Ensure you pass them via --dart-define');
     }
 
     // Inicializar Stripe

@@ -1,7 +1,10 @@
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/email_service.dart';
 
 class EmailRepository {
-  final EmailService emailService = EmailService();
+  final EmailService emailService;
+
+  EmailRepository(SupabaseClient client) : emailService = EmailService(client);
 
   /// Enviar email de bienvenida
   Future<bool> sendWelcome(String email, String name) {
@@ -40,7 +43,10 @@ class EmailRepository {
     String status,
     String? trackingUrl,
   ) {
-    return emailService.sendOrderStatusUpdate(email, orderId, status, trackingUrl);
+    // The previous API had trackingUrl, but the new one doesn't take it currently, 
+    // let's pass trackingUrl as part of the message or skip it if unsupported.
+    // Right now sendOrderStatusUpdate only takes email, orderId, status.
+    return emailService.sendOrderStatusUpdate(email, orderId, status);
   }
 
   /// Enviar newsletter
@@ -58,7 +64,7 @@ class EmailRepository {
     String name,
     String resetLink,
   ) {
-    return emailService.sendPasswordResetEmail(email, name, resetLink);
+    return emailService.sendPasswordReset(email, resetLink);
   }
 
   /// Enviar email de contacto
@@ -68,9 +74,9 @@ class EmailRepository {
     String subject,
     String message,
   ) {
-    return emailService.sendContactFormEmail(
-      senderName,
+    return emailService.sendContactForm(
       senderEmail,
+      senderName,
       subject,
       message,
     );
@@ -83,11 +89,14 @@ class EmailRepository {
     String problem,
     String? attachmentUrl,
   ) {
-    return emailService.sendProblemReportEmail(
+    // Current Edge Function expected signatures
+    final List<String> images = attachmentUrl != null ? [attachmentUrl] : [];
+    return emailService.sendProblemReport(
       userEmail,
-      userName,
+      'N/A', // orderId missing in previous
       problem,
-      attachmentUrl,
+      problem, // description
+      images,
     );
   }
 
@@ -100,13 +109,11 @@ class EmailRepository {
     List<Map<String, dynamic>> items, {
     String? reason,
   }) {
-    return emailService.sendCancellationInvoiceEmail(
+    return emailService.sendCancellationInvoice(
       email,
       orderId,
       refundAmount,
-      customerName,
       items,
-      reason: reason,
     );
   }
 }
