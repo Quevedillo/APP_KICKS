@@ -1121,6 +1121,30 @@ class _OrderDetailSheetState extends ConsumerState<_OrderDetailSheet> {
     setState(() => _isLoading = false);
 
     if (ok) {
+      // Enviar email de reembolso al cliente
+      if (newStatus == 'refunded' && _order.shippingEmail != null && _order.shippingEmail!.isNotEmpty) {
+        try {
+          final emailRepo = ref.read(emailRepositoryProvider);
+          await emailRepo.sendCancellationInvoice(
+            _order.shippingEmail!,
+            _order.displayId,
+            _order.totalPrice / 100,
+            _order.shippingName ?? 'Cliente',
+            _order.items.map((item) => {
+              'name': item.productName,
+              'brand': item.productBrand,
+              'image': item.productImage,
+              'size': item.size,
+              'quantity': item.quantity,
+              'price': item.price / 100,
+            }).toList(),
+            reason: reason,
+          );
+        } catch (emailErr) {
+          print('⚠️ Error enviando email de reembolso: $emailErr');
+        }
+      }
+
       // Reload order
       final updated = await repo.getOrderById(_order.id);
       if (updated != null) setState(() => _order = updated);
@@ -1481,7 +1505,43 @@ class _OrderDetailSheetState extends ConsumerState<_OrderDetailSheet> {
                 ],
 
                 // â”€â”€ Cancel reason â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-                if (_order.cancelledReason != null &&
+                // Return request / Cancel reason
+                if (_order.returnStatus == 'requested') ...[
+                  const SizedBox(height: 16),
+                  _OrderSectionHeader('DEVOLUCIÓN SOLICITADA'),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.amber.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: Colors.amber.withOpacity(0.4)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.assignment_return, color: Colors.amber[600], size: 18),
+                            const SizedBox(width: 8),
+                            Text(
+                              'El cliente ha solicitado una devolución',
+                              style: TextStyle(color: Colors.amber[600], fontWeight: FontWeight.bold, fontSize: 13),
+                            ),
+                          ],
+                        ),
+                        if (_order.cancelledReason != null && _order.cancelledReason!.isNotEmpty) ...[
+                          const SizedBox(height: 10),
+                          const Text('Motivo:', style: TextStyle(color: Colors.grey, fontSize: 11, fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 4),
+                          Text(
+                            _order.cancelledReason!,
+                            style: TextStyle(color: Colors.amber[100], fontSize: 13),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ] else if (_order.cancelledReason != null &&
                     _order.cancelledReason!.isNotEmpty) ...[
                   const SizedBox(height: 16),
                   _OrderSectionHeader('MOTIVO'),

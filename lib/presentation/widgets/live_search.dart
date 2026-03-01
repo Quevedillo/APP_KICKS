@@ -5,6 +5,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:go_router/go_router.dart';
 import '../../data/models/product.dart';
 import '../../logic/providers.dart';
+import '../../utils/vat_helper.dart';
 
 /// Widget de búsqueda en vivo con debounce
 class LiveSearchWidget extends ConsumerStatefulWidget {
@@ -374,7 +375,7 @@ class _SearchResultItem extends StatelessWidget {
                   Row(
                     children: [
                       Text(
-                        '€${(product.price / 100).toStringAsFixed(2)}',
+                        '€${(product.effectivePriceWithVat / 100).toStringAsFixed(2)}',
                         style: TextStyle(
                           color: hasDiscount ? Colors.green : Colors.white,
                           fontWeight: FontWeight.bold,
@@ -384,7 +385,7 @@ class _SearchResultItem extends StatelessWidget {
                       if (hasDiscount) ...[
                         const SizedBox(width: 8),
                         Text(
-                          '€${(product.comparePrice! / 100).toStringAsFixed(2)}',
+                          '€${(VatHelper.priceWithVat(product.comparePrice!) / 100).toStringAsFixed(2)}',
                           style: TextStyle(
                             color: Colors.grey[500],
                             fontSize: 12,
