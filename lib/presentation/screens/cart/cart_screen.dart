@@ -138,43 +138,15 @@ class CartScreen extends ConsumerWidget {
                 
                 const SizedBox(height: 16),
 
-                // Auth warning
-                if (!isLoggedIn)
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    margin: const EdgeInsets.only(bottom: 16),
-                    decoration: BoxDecoration(
-                      color: Colors.orange.withOpacity(0.1),
-                      border: Border.all(color: Colors.orange),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.info_outline, color: Colors.orange, size: 20),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Inicia sesión para completar tu compra',
-                            style: TextStyle(color: Colors.orange[200], fontSize: 13),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
                 // Checkout button
                 SizedBox(
                   width: double.infinity,
                   height: 56,
                   child: ElevatedButton(
                     onPressed: () {
-                      if (!isLoggedIn) {
-                        context.push('/login?redirect=/cart');
-                      } else {
-                        context.push('/checkout');
-                      }
+                      context.push('/checkout');
                     },
-                    child: Text(isLoggedIn ? 'PROCEDER AL PAGO' : 'INICIAR SESIÓN'),
+                    child: const Text('PROCEDER AL PAGO'),
                   ),
                 ),
 
@@ -208,25 +180,6 @@ class CartScreen extends ConsumerWidget {
           ),
         ),
       ],
-    );
-  }
-
-  void _showCheckoutMessage(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1C1C1C),
-        title: const Text('Checkout'),
-        content: const Text(
-          'El pago con Stripe está disponible en el checkout.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
     );
   }
 }

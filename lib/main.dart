@@ -6,6 +6,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'presentation/router.dart';
 import 'core/theme/app_theme.dart';
 import 'data/services/stripe_service.dart';
+import 'logic/providers.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -37,11 +38,14 @@ Future<void> main() async {
   runApp(const ProviderScope(child: MyApp()));
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends ConsumerWidget {
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Watch guest order linker to auto-link orders on login
+    ref.watch(guestOrderLinkerProvider);
+
     return MaterialApp.router(
       debugShowCheckedModeBanner: false,
       title: 'KicksPremium',

@@ -118,13 +118,26 @@ class OrderRepository {
     if (userId == null) return [];
 
     try {
-      final data = await _client
-          .from('orders')
-          .select()
-          .eq('user_id', userId)
-          .order('created_at', ascending: false);
+      // Fetch orders by user_id OR by billing_email matching the user's email
+      // This ensures guest orders linked to the same email also appear
+      final userEmail = _client.auth.currentUser?.email;
+      
+      List<dynamic> data;
+      if (userEmail != null && userEmail.isNotEmpty) {
+        data = await _client
+            .from('orders')
+            .select()
+            .or('user_id.eq.$userId,and(billing_email.eq.$userEmail,user_id.is.null)')
+            .order('created_at', ascending: false);
+      } else {
+        data = await _client
+            .from('orders')
+            .select()
+            .eq('user_id', userId)
+            .order('created_at', ascending: false);
+      }
 
-      return (data as List)
+      return data
           .map((e) {
             try {
               return Order.fromJson(e as Map<String, dynamic>);
@@ -292,6 +305,92 @@ class OrderRepository {
     } catch (e) {
       print('Error cancelling order: $e');
       return false;
+    }
+  }
+
+  /// Create an order for a guest (no authenticated user) or for a verified existing user.
+  /// If [userId] is provided, the order is linked to that user directly.
+  /// Otherwise, it's created with user_id = null and can be linked later.
+  Future<Order?> createGuestOrder({
+    required String stripePaymentIntentId,
+    required List<CartItem> cartItems,
+    required int totalPrice,
+    required String guestEmail,
+    String? userId,
+    int? discountAmount,
+    String? discountCodeId,
+    String? shippingName,
+    String? shippingPhone,
+    Map<String, dynamic>? shippingAddress,
+  }) async {
+    final itemsJson = cartItems.map((item) => {
+      'product_id': item.productId,
+      'name': item.product.name,
+      'brand': item.product.brand,
+      'image': item.product.images.isNotEmpty ? item.product.images.first : '',
+      'price': item.product.price,
+      'size': item.size,
+      'quantity': item.quantity,
+    }).toList();
+
+    if (discountAmount != null && discountAmount > 0) {
+      itemsJson.add({
+        '_meta': true,
+        'discount_amount': discountAmount,
+        'subtotal_amount': totalPrice + discountAmount,
+        'discount_code_id': discountCodeId,
+      });
+    }
+
+    // Use SECURITY DEFINER RPC to bypass RLS for guest inserts
+    final response = await _client.rpc('create_guest_order', params: {
+      'p_stripe_payment_intent_id': stripePaymentIntentId,
+      'p_total_amount': totalPrice,
+      'p_items': itemsJson,
+      'p_billing_email': guestEmail,
+      'p_user_id': userId,
+      'p_shipping_name': shippingName ?? guestEmail.split('@').first,
+      'p_shipping_phone': shippingPhone,
+      'p_shipping_address': shippingAddress,
+    });
+
+    print('✅ Pedido invitado creado: ${response['id']} (email: $guestEmail)');
+
+    // Reduce stock
+    for (final item in cartItems) {
+      try {
+        await _client.rpc('reduce_size_stock', params: {
+          'p_product_id': item.productId,
+          'p_size': item.size,
+          'p_quantity': item.quantity,
+        });
+      } catch (stockErr) {
+        print('⚠️ Error reduciendo stock para ${item.productId} talla ${item.size}: $stockErr');
+      }
+    }
+
+    return Order.fromJson(response as Map<String, dynamic>);
+  }
+
+  /// Links all guest orders (user_id IS NULL) with a matching billing_email
+  /// to the given userId. Called after login/signup.
+  Future<int> linkGuestOrders({
+    required String email,
+    required String userId,
+  }) async {
+    try {
+      final linked = await _client.rpc('link_guest_orders', params: {
+        'p_email': email,
+        'p_user_id': userId,
+      });
+      final count = (linked as int?) ?? 0;
+      if (count > 0) {
+        print('✅ Vinculados $count pedidos de invitado al usuario $userId');
+      }
+      return count;
+    } catch (e) {
+      print('Error linking guest orders: $e');
+      return 0;
     }
   }
 

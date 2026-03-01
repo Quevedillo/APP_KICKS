@@ -190,6 +190,27 @@ final userOrdersProvider = FutureProvider<List<Order>>((ref) async {
   return ref.watch(orderRepositoryProvider).getUserOrders();
 });
 
+/// Links orphaned guest orders (by billing_email) to the user on login/signup.
+final guestOrderLinkerProvider = FutureProvider<void>((ref) async {
+  final authState = ref.watch(authStateProvider);
+  final event = authState.value?.event;
+  if (event == AuthChangeEvent.signedIn || event == AuthChangeEvent.userUpdated) {
+    final user = ref.read(userProvider);
+    if (user != null && user.email != null) {
+      try {
+        await ref.read(orderRepositoryProvider).linkGuestOrders(
+          email: user.email!,
+          userId: user.id,
+        );
+        // Refresh user orders after linking
+        ref.invalidate(userOrdersProvider);
+      } catch (_) {
+        // Silently fail – non-critical
+      }
+    }
+  }
+});
+
 // ========== Cart State ==========
 class CartNotifier extends Notifier<List<CartItem>> {
   @override

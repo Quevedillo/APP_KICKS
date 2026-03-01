@@ -2,6 +2,7 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../logic/providers.dart';
 import '../../../data/models/order.dart';
 import '../../../data/models/product.dart';
@@ -60,7 +61,7 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [Colors.blue.shade700, Colors.blue.shade500],
+                colors: [AppTheme.red.withOpacity(0.8), AppTheme.red],
               ),
               borderRadius: BorderRadius.circular(8),
             ),
@@ -80,7 +81,7 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
       ),
       actions: [
         IconButton(
-          icon: const Icon(Icons.refresh, color: Colors.blue),
+          icon: Icon(Icons.refresh, color: AppTheme.red),
           tooltip: 'Actualizar datos',
           onPressed: _refreshAllData,
         ),
@@ -97,7 +98,7 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
-                Colors.blue.shade700,
+                AppTheme.red,
                 Colors.transparent,
               ],
             ),
@@ -136,13 +137,13 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
         color: Colors.black,
         border: Border(
           top: BorderSide(
-            color: Colors.blue.withValues(alpha: 0.3),
+            color: AppTheme.red.withValues(alpha: 0.3),
             width: 1,
           ),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.blue.withValues(alpha: 0.1),
+            color: AppTheme.red.withValues(alpha: 0.1),
             blurRadius: 12,
             offset: const Offset(0, -2),
           ),
@@ -167,7 +168,7 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
                     decoration: BoxDecoration(
                       border: Border(
                         bottom: BorderSide(
-                          color: isSelected ? Colors.blue : Colors.transparent,
+                          color: isSelected ? AppTheme.red : Colors.transparent,
                           width: 2.5,
                         ),
                       ),
@@ -177,14 +178,14 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
                       children: [
                         Icon(
                           section.icon,
-                          color: isSelected ? Colors.blue : Colors.grey.shade600,
+                          color: isSelected ? AppTheme.red : Colors.grey.shade600,
                           size: 22,
                         ),
                         const SizedBox(height: 4),
                         Text(
                           section.label,
                           style: TextStyle(
-                            color: isSelected ? Colors.blue : Colors.grey.shade600,
+                            color: isSelected ? AppTheme.red : Colors.grey.shade600,
                             fontSize: 10,
                             fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                             letterSpacing: 0.3,
@@ -300,7 +301,7 @@ class AdminDashboardMobile extends ConsumerWidget {
                   title: 'Pedidos Hoy', 
                   value: stats['ordersToday'].toString(), 
                   icon: Icons.shopping_bag, 
-                  color: Colors.blue
+                  color: AppTheme.red
                 ),
                 _StatCard(
                   title: 'Ingresos Hoy', 
@@ -330,7 +331,7 @@ class AdminDashboardMobile extends ConsumerWidget {
                   title: 'Por Enviar',
                   value: stats['pendingShipments'].toString(),
                   icon: Icons.local_shipping,
-                  color: Colors.amber,
+                  color: AppTheme.accent,
                 ),
               ],
             ),
@@ -399,7 +400,7 @@ class AdminDashboardMobile extends ConsumerWidget {
               title: 'Producto M\u00e1s Vendido',
               value: stats['topProduct'] ?? 'Sin datos',
               icon: Icons.star,
-              color: Colors.amber,
+              color: AppTheme.accent,
             ),
 
             const SizedBox(height: 24),
@@ -429,7 +430,7 @@ class AdminDashboardMobile extends ConsumerWidget {
             // Sales Chart - Last 7 Days
             const Text(
               'Ventas \u00daltimos 7 D\u00edas',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.amber),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.accent),
             ),
             const SizedBox(height: 16),
             Container(
@@ -448,7 +449,7 @@ class AdminDashboardMobile extends ConsumerWidget {
             // Quick Email Access
             const Text(
               'Acceso Rápido',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.amber),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.accent),
             ),
             const SizedBox(height: 12),
             
@@ -953,7 +954,7 @@ class _AdminOrdersMobileState extends ConsumerState<AdminOrdersMobile> {
                                       Text(
                                         '€${(order.totalPrice / 100).toStringAsFixed(2)}',
                                         style: const TextStyle(
-                                          color: Colors.amber,
+                                          color: AppTheme.accent,
                                           fontWeight: FontWeight.bold,
                                         ),
                                       ),
@@ -1470,7 +1471,7 @@ class _OrderDetailSheetState extends ConsumerState<_OrderDetailSheet> {
                             '€${(item.price * item.quantity / 100).toStringAsFixed(2)}',
                             style: const TextStyle(
                                 fontWeight: FontWeight.bold,
-                                color: Colors.amber),
+                                color: AppTheme.accent),
                           ),
                         ],
                       ),
@@ -1488,7 +1489,7 @@ class _OrderDetailSheetState extends ConsumerState<_OrderDetailSheet> {
                   'TOTAL',
                   '€${(_order.totalPrice / 100).toStringAsFixed(2)}',
                   bold: true,
-                  color: Colors.amber,
+                  color: AppTheme.accent,
                 ),
 
                 const SizedBox(height: 16),
@@ -1512,20 +1513,20 @@ class _OrderDetailSheetState extends ConsumerState<_OrderDetailSheet> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.amber.withOpacity(0.08),
+                      color: AppTheme.accent.withOpacity(0.08),
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: Colors.amber.withOpacity(0.4)),
+                      border: Border.all(color: AppTheme.accent.withOpacity(0.4)),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
                           children: [
-                            Icon(Icons.assignment_return, color: Colors.amber[600], size: 18),
+                            Icon(Icons.assignment_return, color: AppTheme.accent, size: 18),
                             const SizedBox(width: 8),
                             Text(
                               'El cliente ha solicitado una devolución',
-                              style: TextStyle(color: Colors.amber[600], fontWeight: FontWeight.bold, fontSize: 13),
+                              style: TextStyle(color: AppTheme.accent, fontWeight: FontWeight.bold, fontSize: 13),
                             ),
                           ],
                         ),
@@ -1535,7 +1536,7 @@ class _OrderDetailSheetState extends ConsumerState<_OrderDetailSheet> {
                           const SizedBox(height: 4),
                           Text(
                             _order.cancelledReason!,
-                            style: TextStyle(color: Colors.amber[100], fontSize: 13),
+                            style: TextStyle(color: AppTheme.accent.withOpacity(0.7), fontSize: 13),
                           ),
                         ],
                       ],
@@ -1760,7 +1761,7 @@ class AdminProductsMobile extends ConsumerWidget {
                 icon: const Icon(Icons.add, size: 18),
                 label: const Text('Nuevo'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.amber[700],
+                  backgroundColor: AppTheme.accent,
                   foregroundColor: Colors.black,
                 ),
               ),
@@ -1821,7 +1822,7 @@ class AdminProductsMobile extends ConsumerWidget {
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
-                                Text('€${(product.price / 100).toStringAsFixed(2)}', style: const TextStyle(color: Colors.amber, fontSize: 12)),
+                                Text('€${(product.price / 100).toStringAsFixed(2)}', style: const TextStyle(color: AppTheme.accent, fontSize: 12)),
                                 Text(
                                   '${product.sizesAvailable.values.fold<int>(0, (sum, v) => sum + (v is int ? v : int.tryParse(v.toString()) ?? 0))} pares',
                                   style: TextStyle(color: Colors.grey[500], fontSize: 10),
@@ -1878,7 +1879,7 @@ class AdminUsersMobile extends ConsumerWidget {
             child: Row(
               children: [
                 CircleAvatar(
-                  backgroundColor: user.isAdmin ? Colors.red[700] : Colors.amber[700],
+                  backgroundColor: user.isAdmin ? Colors.red[700] : AppTheme.accent,
                   child: Text(
                     user.fullName != null && user.fullName!.isNotEmpty 
                         ? user.fullName![0].toUpperCase() 
@@ -1944,7 +1945,7 @@ class AdminEmailsMobile extends StatelessWidget {
           _EmailTypeCard(
             icon: Icons.local_shipping,
             title: 'Actualización de Envío',
-            color: Colors.blue,
+            color: AppTheme.red,
             onTap: () {},
           ),
           _EmailTypeCard(
@@ -1962,7 +1963,7 @@ class AdminEmailsMobile extends StatelessWidget {
           _EmailTypeCard(
             icon: Icons.shopping_basket,
             title: 'Carrito Abandonado',
-            color: Colors.amber,
+            color: AppTheme.accent,
             onTap: () {},
           ),
           
@@ -2065,7 +2066,7 @@ class AdminCategoriesMobile extends ConsumerWidget {
                 icon: const Icon(Icons.add, size: 18),
                 label: const Text('Nueva'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.amber[700],
+                  backgroundColor: AppTheme.accent,
                   foregroundColor: Colors.black,
                 ),
               ),
@@ -2090,7 +2091,7 @@ class AdminCategoriesMobile extends ConsumerWidget {
                   ),
                   child: ListTile(
                     leading: CircleAvatar(
-                      backgroundColor: Colors.amber[700],
+                      backgroundColor: AppTheme.accent,
                       child: Text(category.icon ?? '?', style: const TextStyle(color: Colors.black)),
                     ),
                     title: Text(category.name, style: const TextStyle(fontWeight: FontWeight.bold)),
@@ -2132,7 +2133,7 @@ class AdminCouponsMobile extends ConsumerWidget {
                 icon: const Icon(Icons.add, size: 18),
                 label: const Text('Nuevo'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.amber[700],
+                  backgroundColor: AppTheme.accent,
                   foregroundColor: Colors.black,
                 ),
               ),
@@ -2250,9 +2251,9 @@ class _AdminFinanceMobileState extends ConsumerState<AdminFinanceMobile> {
                       margin: EdgeInsets.only(right: i < 3 ? 6 : 0),
                       padding: const EdgeInsets.symmetric(vertical: 10),
                       decoration: BoxDecoration(
-                        color: _selectedPeriod == i ? Colors.amber : Colors.grey[900],
+                        color: _selectedPeriod == i ? AppTheme.accent : Colors.grey[900],
                         borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: _selectedPeriod == i ? Colors.amber : Colors.grey[700]!),
+                        border: Border.all(color: _selectedPeriod == i ? AppTheme.accent : Colors.grey[700]!),
                       ),
                       child: Center(
                         child: Text(
@@ -2279,7 +2280,7 @@ class _AdminFinanceMobileState extends ConsumerState<AdminFinanceMobile> {
                 physics: const NeverScrollableScrollPhysics(),
                 children: [
                   _ReportCard(title: 'Ingresos ${periodLabels[_selectedPeriod]}', value: '€${periodRevenue.toStringAsFixed(2)}', icon: Icons.trending_up, color: Colors.green),
-                  _ReportCard(title: 'Pedidos', value: '$periodOrders', icon: Icons.shopping_bag, color: Colors.blue),
+                  _ReportCard(title: 'Pedidos', value: '$periodOrders', icon: Icons.shopping_bag, color: AppTheme.red),
                   _ReportCard(title: 'Ticket Medio', value: '€${avgTicket.toStringAsFixed(2)}', icon: Icons.shopping_cart, color: Colors.purple),
                   _ReportCard(title: 'Pendientes', value: '$pendingOrders', icon: Icons.pending_actions, color: Colors.orange),
                 ],
@@ -2288,7 +2289,7 @@ class _AdminFinanceMobileState extends ConsumerState<AdminFinanceMobile> {
               const SizedBox(height: 20),
 
               // Cost & Profit section (compra-venta)
-              const Text('Compra / Venta', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.amber)),
+              const Text('Compra / Venta', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.accent)),
               const SizedBox(height: 12),
               Row(
                 children: [
@@ -2319,7 +2320,7 @@ class _AdminFinanceMobileState extends ConsumerState<AdminFinanceMobile> {
                       title: 'Ingresos Totales',
                       value: '€${totalRevenue.toStringAsFixed(2)}',
                       icon: Icons.account_balance_wallet,
-                      color: Colors.blue,
+                      color: AppTheme.red,
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -2386,7 +2387,7 @@ class _AdminFinanceMobileState extends ConsumerState<AdminFinanceMobile> {
             const SizedBox(height: 24),
             const Text(
               'Análisis de Márgenes por Producto',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.amber),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.accent),
             ),
             const SizedBox(height: 4),
             Text(
@@ -2606,7 +2607,7 @@ class _SettingSwitch extends StatelessWidget {
           Switch(
             value: value,
             onChanged: onChanged,
-            activeThumbColor: Colors.amber[700],
+            activeThumbColor: AppTheme.accent,
           ),
         ],
       ),
@@ -2800,7 +2801,7 @@ class _ProductDetailSheet extends ConsumerWidget {
                     Expanded(
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.amber[700],
+                          backgroundColor: AppTheme.accent,
                           foregroundColor: Colors.black,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                         ),
@@ -3229,7 +3230,7 @@ class _ProductFormDialogState extends ConsumerState<_ProductFormDialog> {
           padding: const EdgeInsets.all(16),
           children: [
             // --- Sección de fotos ---
-            const Text('FOTOS DEL PRODUCTO', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.amber, fontSize: 14)),
+            const Text('FOTOS DEL PRODUCTO', style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.accent, fontSize: 14)),
             const SizedBox(height: 8),
             SizedBox(
               height: 120,
@@ -3256,14 +3257,14 @@ class _ProductFormDialogState extends ConsumerState<_ProductFormDialog> {
                       decoration: BoxDecoration(
                         color: Colors.grey[800],
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.amber.withOpacity(0.5), width: 2),
+                        border: Border.all(color: AppTheme.accent.withOpacity(0.5), width: 2),
                       ),
                       child: const Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.add_a_photo, color: Colors.amber, size: 28),
+                          Icon(Icons.add_a_photo, color: AppTheme.accent, size: 28),
                           SizedBox(height: 4),
-                          Text('Añadir', style: TextStyle(color: Colors.amber, fontSize: 10)),
+                          Text('Añadir', style: TextStyle(color: AppTheme.accent, fontSize: 10)),
                         ],
                       ),
                     ),
@@ -3282,7 +3283,7 @@ class _ProductFormDialogState extends ConsumerState<_ProductFormDialog> {
             const SizedBox(height: 20),
 
             // ─── DESTACADO ──────────────────────────────────────
-            const Text('DESTACADO', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.amber, fontSize: 14)),
+            const Text('DESTACADO', style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.accent, fontSize: 14)),
             const SizedBox(height: 8),
             Container(
               padding: const EdgeInsets.all(12),
@@ -3304,8 +3305,8 @@ class _ProductFormDialogState extends ConsumerState<_ProductFormDialog> {
                   Switch(
                     value: _isFeatured,
                     onChanged: (v) => setState(() => _isFeatured = v),
-                    activeThumbColor: Colors.amber,
-                    activeTrackColor: Colors.amber[900],
+                    activeThumbColor: AppTheme.accent,
+                    activeTrackColor: AppTheme.accent.withOpacity(0.5),
                   ),
                 ],
               ),
@@ -3314,7 +3315,7 @@ class _ProductFormDialogState extends ConsumerState<_ProductFormDialog> {
             const SizedBox(height: 20),
 
             // â”€â”€â”€ DESCUENTO â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-            const Text('DESCUENTO', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.amber, fontSize: 14)),
+            const Text('DESCUENTO', style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.accent, fontSize: 14)),
             const SizedBox(height: 8),
             Container(
               padding: const EdgeInsets.all(12),
@@ -3411,7 +3412,7 @@ class _ProductFormDialogState extends ConsumerState<_ProductFormDialog> {
                         fillColor: Colors.grey[850],
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                         suffixText: _discountType == 'percentage' ? '%' : '€',
-                        suffixStyle: const TextStyle(color: Colors.amber),
+                        suffixStyle: const TextStyle(color: AppTheme.accent),
                       ),
                     ),
                     // Vista previa del precio
@@ -3446,7 +3447,7 @@ class _ProductFormDialogState extends ConsumerState<_ProductFormDialog> {
             const SizedBox(height: 20),
 
             // â”€â”€â”€ TIPO DE COLECCIÃ“N â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-            const Text('TIPO DE LANZAMIENTO', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.amber, fontSize: 14)),
+            const Text('TIPO DE LANZAMIENTO', style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.accent, fontSize: 14)),
             const SizedBox(height: 8),
             Row(
               children: [
@@ -3463,10 +3464,10 @@ class _ProductFormDialogState extends ConsumerState<_ProductFormDialog> {
                         padding: const EdgeInsets.symmetric(vertical: 10),
                         alignment: Alignment.center,
                         decoration: BoxDecoration(
-                          color: _releaseType == entry.$1 ? Colors.amber.withOpacity(0.15) : Colors.grey[900],
+                          color: _releaseType == entry.$1 ? AppTheme.accent.withOpacity(0.15) : Colors.grey[900],
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                            color: _releaseType == entry.$1 ? Colors.amber : Colors.grey[700]!,
+                            color: _releaseType == entry.$1 ? AppTheme.accent : Colors.grey[700]!,
                           ),
                         ),
                         child: Text(
@@ -3474,7 +3475,7 @@ class _ProductFormDialogState extends ConsumerState<_ProductFormDialog> {
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
-                            color: _releaseType == entry.$1 ? Colors.amber : Colors.grey[400],
+                            color: _releaseType == entry.$1 ? AppTheme.accent : Colors.grey[400],
                           ),
                           textAlign: TextAlign.center,
                         ),
@@ -3490,7 +3491,7 @@ class _ProductFormDialogState extends ConsumerState<_ProductFormDialog> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('INVENTARIO POR TALLA', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.amber, fontSize: 14)),
+                const Text('INVENTARIO POR TALLA', style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.accent, fontSize: 14)),
                 Text('Total: ${_calculateTotalStock()} pares', style: TextStyle(color: Colors.grey[400], fontSize: 12)),
               ],
             ),
@@ -3515,10 +3516,10 @@ class _ProductFormDialogState extends ConsumerState<_ProductFormDialog> {
                 
                 return Container(
                   decoration: BoxDecoration(
-                    color: hasStock ? Colors.amber.withOpacity(0.1) : Colors.grey[900],
+                    color: hasStock ? AppTheme.accent.withOpacity(0.1) : Colors.grey[900],
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
-                      color: hasStock ? Colors.amber.withOpacity(0.5) : Colors.grey[700]!,
+                      color: hasStock ? AppTheme.accent.withOpacity(0.5) : Colors.grey[700]!,
                     ),
                   ),
                   child: Column(
@@ -3527,7 +3528,7 @@ class _ProductFormDialogState extends ConsumerState<_ProductFormDialog> {
                       Text(size, style: TextStyle(
                         fontWeight: FontWeight.bold, 
                         fontSize: 12,
-                        color: hasStock ? Colors.amber : Colors.grey[400],
+                        color: hasStock ? AppTheme.accent : Colors.grey[400],
                       )),
                       const SizedBox(height: 2),
                       SizedBox(
@@ -3816,7 +3817,7 @@ class _CouponFormDialogState extends ConsumerState<_CouponFormDialog> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       decoration: BoxDecoration(
-                        color: _discountType == 'percentage' ? Colors.amber[700] : Colors.grey[800],
+                        color: _discountType == 'percentage' ? AppTheme.accent : Colors.grey[800],
                         borderRadius: BorderRadius.circular(8),
                       ),
                       alignment: Alignment.center,
@@ -3838,7 +3839,7 @@ class _CouponFormDialogState extends ConsumerState<_CouponFormDialog> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       decoration: BoxDecoration(
-                        color: _discountType == 'fixed' ? Colors.amber[700] : Colors.grey[800],
+                        color: _discountType == 'fixed' ? AppTheme.accent : Colors.grey[800],
                         borderRadius: BorderRadius.circular(8),
                       ),
                       alignment: Alignment.center,
@@ -3892,7 +3893,7 @@ class _CouponFormDialogState extends ConsumerState<_CouponFormDialog> {
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.calendar_today, color: Colors.amber, size: 20),
+                    const Icon(Icons.calendar_today, color: AppTheme.accent, size: 20),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
@@ -3934,7 +3935,7 @@ class _CouponFormDialogState extends ConsumerState<_CouponFormDialog> {
                   Switch(
                     value: _isActive,
                     onChanged: (v) => setState(() => _isActive = v),
-                    activeThumbColor: Colors.amber[700],
+                    activeThumbColor: AppTheme.accent,
                   ),
                 ],
               ),
@@ -3944,7 +3945,7 @@ class _CouponFormDialogState extends ConsumerState<_CouponFormDialog> {
             ElevatedButton(
               onPressed: _isSaving ? null : _save,
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.amber[700],
+                backgroundColor: AppTheme.accent,
                 foregroundColor: Colors.black,
                 padding: const EdgeInsets.symmetric(vertical: 16),
               ),
@@ -4085,7 +4086,7 @@ class _SalesChart extends StatelessWidget {
             barRods: [
               BarChartRodData(
                 toY: (i + 1) * 50.0,
-                color: Colors.amber,
+                color: AppTheme.accent,
                 width: 20,
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
               ),
@@ -4102,7 +4103,7 @@ class _SalesChart extends StatelessWidget {
             barRods: [
               BarChartRodData(
                 toY: value,
-                color: Colors.amber,
+                color: AppTheme.accent,
                 width: 20,
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
               ),

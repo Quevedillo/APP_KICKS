@@ -83,4 +83,57 @@ class AuthRepository {
     final profile = await getUserProfile();
     return profile?['is_admin'] == true;
   }
+
+  /// Checks if an email is already registered in Supabase Auth.
+  /// Returns true if the email exists.
+  Future<bool> emailExists(String email) async {
+    try {
+      final result = await _client
+          .from('user_profiles')
+          .select('id')
+          .eq('email', email.trim().toLowerCase())
+          .maybeSingle();
+      return result != null;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Verifies password for an existing email WITHOUT creating a persistent session.
+  /// Returns the user's ID if credentials are correct, null otherwise.
+  Future<String?> verifyPassword({
+    required String email,
+    required String password,
+  }) async {
+    // Save current session
+    final currentSession = _client.auth.currentSession;
+    final hadSession = currentSession != null;
+
+    try {
+      final response = await _client.auth.signInWithPassword(
+        email: email,
+        password: password,
+      );
+      final userId = response.user?.id;
+
+      // Immediately sign out to avoid creating a persistent session
+      await _client.auth.signOut();
+
+      // Restore previous session if there was one
+      if (hadSession) {
+        await _client.auth.recoverSession(currentSession.refreshToken ?? '');
+      }
+
+      return userId;
+    } catch (_) {
+      // Wrong password or other auth error
+      // Make sure we restore the previous session
+      if (hadSession && currentSession != null) {
+        try {
+          await _client.auth.recoverSession(currentSession.refreshToken ?? '');
+        } catch (_) {}
+      }
+      return null;
+    }
+  }
 }

@@ -5,7 +5,9 @@ import 'package:intl/intl.dart';
 import '../../../logic/providers.dart';
 import '../../../data/services/stripe_service.dart';
 import '../../../data/models/discount_code.dart';
+import '../../../data/models/order.dart';
 import '../../../utils/vat_helper.dart';
+import '../../../core/theme/app_theme.dart';
 
 class CheckoutScreen extends ConsumerStatefulWidget {
   const CheckoutScreen({super.key});
@@ -37,6 +39,15 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen>
   String _country = 'España';
   bool _shippingValidated = false;
 
+  // Guest checkout state
+  final _guestEmailController = TextEditingController();
+  final _guestPasswordController = TextEditingController();
+  bool _guestEmailExists = false;
+  bool _isCheckingEmail = false;
+  bool _guestPasswordVerified = false;
+  String? _guestVerifiedUserId;
+  String? _guestError;
+
   bool get _shippingComplete =>
       _fullNameController.text.trim().isNotEmpty &&
       _addressController.text.trim().isNotEmpty &&
@@ -67,6 +78,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen>
     _cityController.dispose();
     _postalCodeController.dispose();
     _phoneController.dispose();
+    _guestEmailController.dispose();
+    _guestPasswordController.dispose();
     super.dispose();
   }
 
@@ -141,8 +154,117 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen>
     return withVat - _discountAmount;
   }
 
+  /// Check if guest email exists in the database
+  Future<void> _checkGuestEmail() async {
+    final email = _guestEmailController.text.trim();
+    if (email.isEmpty || !email.contains('@')) return;
+
+    setState(() {
+      _isCheckingEmail = true;
+      _guestError = null;
+      _guestPasswordVerified = false;
+      _guestVerifiedUserId = null;
+    });
+
+    try {
+      final authRepo = ref.read(authRepositoryProvider);
+      final exists = await authRepo.emailExists(email);
+      setState(() {
+        _guestEmailExists = exists;
+        _isCheckingEmail = false;
+      });
+    } catch (e) {
+      setState(() {
+        _guestEmailExists = false;
+        _isCheckingEmail = false;
+      });
+    }
+  }
+
+  /// Verify password for an existing email (guest checkout)
+  Future<void> _verifyGuestPassword() async {
+    final email = _guestEmailController.text.trim();
+    final password = _guestPasswordController.text;
+    if (email.isEmpty || password.isEmpty) return;
+
+    setState(() {
+      _guestError = null;
+    });
+
+    try {
+      final authRepo = ref.read(authRepositoryProvider);
+      final userId = await authRepo.verifyPassword(
+        email: email,
+        password: password,
+      );
+
+      if (userId != null) {
+        setState(() {
+          _guestPasswordVerified = true;
+          _guestVerifiedUserId = userId;
+          _guestError = null;
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Row(children: [
+                Icon(Icons.check_circle, color: Colors.white),
+                SizedBox(width: 8),
+                Text('Identidad verificada correctamente'),
+              ]),
+              backgroundColor: Colors.green,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+      } else {
+        setState(() {
+          _guestPasswordVerified = false;
+          _guestVerifiedUserId = null;
+          _guestError = 'Contraseña incorrecta. Verifica e inténtalo de nuevo.';
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _guestError = 'Error al verificar: $e';
+      });
+    }
+  }
+
   Future<void> _processPayment() async {
     if (_isProcessing) return;
+
+    final isLoggedIn = ref.read(isLoggedInProvider);
+    final isGuest = !isLoggedIn;
+
+    // For guests: validate email is provided
+    if (isGuest) {
+      final guestEmail = _guestEmailController.text.trim();
+      if (guestEmail.isEmpty || !guestEmail.contains('@')) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Row(children: [
+              Icon(Icons.warning_amber_rounded, color: Colors.white),
+              SizedBox(width: 8),
+              Text('Introduce un email válido para continuar'),
+            ]),
+            backgroundColor: Colors.orange[800],
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+        return;
+      }
+      // If email exists but password not verified, block
+      if (_guestEmailExists && !_guestPasswordVerified) {
+        setState(() {
+          _guestError = 'Este email ya está registrado. Introduce tu contraseña para continuar.';
+        });
+        return;
+      }
+    }
 
     // Validate shipping address first
     setState(() => _shippingValidated = true);
@@ -169,11 +291,17 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen>
 
     try {
       final cartItems = ref.read(cartProvider);
-      final userEmail = ref.read(userEmailProvider);
+      final String emailForPayment;
+      
+      if (isGuest) {
+        emailForPayment = _guestEmailController.text.trim();
+      } else {
+        emailForPayment = ref.read(userEmailProvider);
+      }
       final finalAmount = _finalTotal;
 
       if (cartItems.isEmpty) throw Exception('Carrito vacío');
-      if (userEmail.isEmpty) throw Exception('Usuario no autenticado');
+      if (emailForPayment.isEmpty) throw Exception('Email no proporcionado');
       if (finalAmount <= 0) throw Exception('Monto inválido');
 
       // 1. Crear Payment Intent
@@ -183,9 +311,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen>
         orderId: DateTime.now().millisecondsSinceEpoch.toString(),
         metadata: {
           'itemCount': cartItems.length.toString(),
-          'userEmail': userEmail,
+          'userEmail': emailForPayment,
           'discountCode': _appliedDiscount?.code ?? '',
           'discountAmount': _discountAmount.toString(),
+          'isGuest': isGuest.toString(),
         },
       );
 
@@ -199,7 +328,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen>
       // 2. Init Payment Sheet
       await StripeService.initPaymentSheet(
         clientSecret: clientSecret,
-        email: userEmail,
+        email: emailForPayment,
       );
 
       if (!mounted) return;
@@ -213,26 +342,54 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen>
         final paymentIntentId = paymentData['paymentIntentId'] as String? ?? '';
         
         try {
-          final order = await orderRepo.createOrder(
-            stripePaymentIntentId: paymentIntentId,
-            cartItems: cartItems,
-            totalPrice: finalAmount,
-            discountAmount: _discountAmount > 0 ? _discountAmount : null,
-            discountCodeId: _appliedDiscount?.id,
-            shippingEmail: userEmail,
-            shippingName: _fullNameController.text.trim(),
-            shippingPhone: _phoneController.text.trim().isNotEmpty
-                ? _phoneController.text.trim()
-                : null,
-            shippingAddress: {
-              'full_name': _fullNameController.text.trim(),
-              'address': _addressController.text.trim(),
-              'city': _cityController.text.trim(),
-              'postal_code': _postalCodeController.text.trim(),
-              'country': _country,
-              'phone': _phoneController.text.trim(),
-            },
-          );
+          Order? order;
+          
+          if (isGuest) {
+            // Guest checkout: use createGuestOrder
+            order = await orderRepo.createGuestOrder(
+              stripePaymentIntentId: paymentIntentId,
+              cartItems: cartItems,
+              totalPrice: finalAmount,
+              guestEmail: emailForPayment,
+              userId: _guestVerifiedUserId, // null if new email, user ID if verified
+              discountAmount: _discountAmount > 0 ? _discountAmount : null,
+              discountCodeId: _appliedDiscount?.id,
+              shippingName: _fullNameController.text.trim(),
+              shippingPhone: _phoneController.text.trim().isNotEmpty
+                  ? _phoneController.text.trim()
+                  : null,
+              shippingAddress: {
+                'full_name': _fullNameController.text.trim(),
+                'address': _addressController.text.trim(),
+                'city': _cityController.text.trim(),
+                'postal_code': _postalCodeController.text.trim(),
+                'country': _country,
+                'phone': _phoneController.text.trim(),
+              },
+            );
+          } else {
+            // Logged-in user: use regular createOrder
+            order = await orderRepo.createOrder(
+              stripePaymentIntentId: paymentIntentId,
+              cartItems: cartItems,
+              totalPrice: finalAmount,
+              discountAmount: _discountAmount > 0 ? _discountAmount : null,
+              discountCodeId: _appliedDiscount?.id,
+              shippingEmail: emailForPayment,
+              shippingName: _fullNameController.text.trim(),
+              shippingPhone: _phoneController.text.trim().isNotEmpty
+                  ? _phoneController.text.trim()
+                  : null,
+              shippingAddress: {
+                'full_name': _fullNameController.text.trim(),
+                'address': _addressController.text.trim(),
+                'city': _cityController.text.trim(),
+                'postal_code': _postalCodeController.text.trim(),
+                'country': _country,
+                'phone': _phoneController.text.trim(),
+              },
+            );
+          }
 
           // 4.1 Registrar uso del código de descuento
           if (_appliedDiscount != null && order != null) {
@@ -250,7 +407,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen>
             
             // Email al cliente — precios CON IVA para el usuario
             await emailRepo.sendOrderConfirmation(
-              userEmail,
+              emailForPayment,
               order.displayId,
               finalAmount / 100,
               cartItems.map((item) => {
@@ -266,7 +423,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen>
             // Notificar al admin
             await emailRepo.notifyAdminNewOrder(
               order.displayId,
-              userEmail,
+              emailForPayment,
               finalAmount / 100,
               cartItems.map((item) => {
                 'name': item.product.name,
@@ -415,7 +572,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen>
               const SizedBox(height: 32),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.amber[700],
+                  backgroundColor: AppTheme.accent,
                   padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
@@ -532,7 +689,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen>
                           style: TextStyle(
                             fontSize: 28,
                             fontWeight: FontWeight.bold,
-                            color: Colors.amber[700],
+                            color: AppTheme.accent,
                           ),
                         ),
                       ],
@@ -540,6 +697,14 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen>
                   ],
                 ),
               ),
+
+              // Guest email section (only shown when not logged in)
+              if (!ref.watch(isLoggedInProvider))
+                _buildSectionCard(
+                  title: 'TU EMAIL',
+                  icon: Icons.email_outlined,
+                  child: _buildGuestEmailSection(),
+                ),
 
               // Shipping address section
               _buildSectionCard(
@@ -617,7 +782,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen>
                             child: ElevatedButton(
                               onPressed: _isValidatingCode ? null : _validateDiscountCode,
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.amber[700],
+                                backgroundColor: AppTheme.accent,
                                 foregroundColor: Colors.black,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
@@ -727,11 +892,11 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen>
                   child: ElevatedButton(
                     onPressed: _isProcessing ? null : _processPayment,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.amber[700],
+                      backgroundColor: AppTheme.accent,
                       disabledBackgroundColor: Colors.grey[800],
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                       elevation: 8,
-                      shadowColor: Colors.amber.withOpacity(0.4),
+                      shadowColor: AppTheme.accent.withOpacity(0.4),
                     ),
                     child: _isProcessing
                         ? Row(
@@ -957,6 +1122,167 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen>
     );
   }
 
+  Widget _buildGuestEmailSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Email input
+        TextField(
+          controller: _guestEmailController,
+          keyboardType: TextInputType.emailAddress,
+          style: const TextStyle(color: Colors.white),
+          decoration: InputDecoration(
+            hintText: 'tu@email.com',
+            hintStyle: TextStyle(color: Colors.grey[600]),
+            filled: true,
+            fillColor: Colors.grey[850],
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+            prefixIcon: Icon(Icons.email_outlined, color: Colors.grey[500]),
+            suffixIcon: _isCheckingEmail
+                ? const Padding(
+                    padding: EdgeInsets.all(12),
+                    child: SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.accent),
+                    ),
+                  )
+                : TextButton(
+                    onPressed: _checkGuestEmail,
+                    child: Text(
+                      'Verificar',
+                      style: TextStyle(
+                        color: AppTheme.accent,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+          ),
+        ),
+        const SizedBox(height: 12),
+
+        // Case 1: Email exists → ask for password
+        if (_guestEmailExists) ...[
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppTheme.accent.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppTheme.accent.withOpacity(0.3)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.info_outline, color: AppTheme.accent, size: 16),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Este email tiene cuenta. Verifica tu contraseña para vincular el pedido.',
+                        style: TextStyle(color: AppTheme.accent, fontSize: 12),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _guestPasswordController,
+                  obscureText: true,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    hintText: 'Contraseña',
+                    hintStyle: TextStyle(color: Colors.grey[600]),
+                    filled: true,
+                    fillColor: Colors.grey[850],
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                    prefixIcon: Icon(Icons.lock_outline, color: Colors.grey[500]),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: _guestPasswordVerified ? null : _verifyGuestPassword,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _guestPasswordVerified ? Colors.green : AppTheme.accent,
+                      disabledBackgroundColor: Colors.green,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    child: _guestPasswordVerified
+                        ? const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.check_circle, color: Colors.white, size: 18),
+                              SizedBox(width: 8),
+                              Text('Verificado', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                            ],
+                          )
+                        : const Text('Verificar contraseña', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+
+        // Case 2: Email checked, does not exist → proceed freely
+        if (!_guestEmailExists && !_isCheckingEmail && _guestEmailController.text.trim().contains('@')) ...[
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.green.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: Colors.green.withOpacity(0.3)),
+            ),
+            child: const Row(
+              children: [
+                Icon(Icons.check_circle_outline, color: Colors.green, size: 16),
+                SizedBox(width: 8),
+                Text(
+                  'Email válido. No se requiere contraseña.',
+                  style: TextStyle(color: Colors.green, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+        ],
+
+        // Error message
+        if (_guestError != null) ...[
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.red.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: Colors.red.withOpacity(0.3)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.error_outline, color: Colors.red, size: 16),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    _guestError!,
+                    style: const TextStyle(color: Colors.red, fontSize: 12),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
   Widget _buildSectionCard({
     required String title,
     required IconData icon,
@@ -975,7 +1301,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen>
         children: [
           Row(
             children: [
-              Icon(icon, color: Colors.amber[700], size: 20),
+              Icon(icon, color: AppTheme.accent, size: 20),
               const SizedBox(width: 8),
               Text(
                 title,
@@ -1081,7 +1407,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen>
             style: TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 16,
-              color: Colors.amber[700],
+              color: AppTheme.accent,
             ),
           ),
         ],
