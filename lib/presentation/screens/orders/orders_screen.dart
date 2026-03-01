@@ -7,7 +7,6 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import '../../../logic/providers.dart';
 import '../../../data/models/order.dart';
-import '../../widgets/credit_note.dart';
 
 class OrdersScreen extends ConsumerWidget {
   const OrdersScreen({super.key});
@@ -385,33 +384,6 @@ class _OrderCard extends StatelessWidget {
                       ),
                   ],
                 ),
-                // Credit Note Button - for refunded orders
-                if (order.status == 'refunded' || order.status == 'returned') ...[
-                  const SizedBox(height: 8),
-                  SizedBox(
-                    width: double.infinity,
-                    child: CreditNoteButton(
-                      orderId: order.id,
-                      orderDisplayId: order.displayId,
-                      customerName: order.shippingName?.isNotEmpty == true
-                          ? order.shippingName!
-                          : 'Cliente',
-                      customerEmail: order.shippingEmail?.isNotEmpty == true
-                          ? order.shippingEmail!
-                          : 'N/A',
-                      refundAmount: order.totalPrice.toDouble(),
-                      reason: order.status == 'returned' 
-                          ? 'Devolución del pedido' 
-                          : 'Reembolso del pedido',
-                      items: order.items.map((item) => {
-                        'name': item.productName,
-                        'size': item.size,
-                        'quantity': item.quantity,
-                        'price': item.price,
-                      }).toList(),
-                    ),
-                  ),
-                ],
               ],
             ),
           ),
@@ -1049,11 +1021,11 @@ class _StatusBadge extends StatelessWidget {
       case 'pending':
         return _StatusConfig(Colors.yellow, 'Pendiente');
       case 'paid':
-        return _StatusConfig(Colors.blue, 'Pagado');
+        return _StatusConfig(Colors.teal, 'Pagado');
       case 'processing':
-        return _StatusConfig(Colors.cyan, 'Procesando');
+        return _StatusConfig(Colors.orange, 'Procesando');
       case 'shipped':
-        return _StatusConfig(Colors.indigo, 'Enviado');
+        return _StatusConfig(Colors.teal, 'Enviado');
       case 'delivered':
         return _StatusConfig(Colors.teal, 'Entregado');
       case 'failed':

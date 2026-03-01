@@ -514,14 +514,53 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen>
                 icon: Icons.receipt_long,
                 child: Column(
                   children: [
+                    // TOTAL al principio (grande y visible)
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: AppTheme.accent.withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppTheme.accent.withOpacity(0.3)),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'TOTAL A PAGAR',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white70,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                          Text(
+                            VatHelper.formatEur(_finalTotal),
+                            style: const TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.accent,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 16),
+                    const Divider(height: 1, color: Colors.grey),
+                    const SizedBox(height: 12),
+
+                    // Items del pedido
                     ...cartItems.map((item) => _buildOrderItem(item, currencyFormat)),
+
                     const Divider(height: 24, color: Colors.grey),
-                    
+
+                    // Desglose de IVA
                     // Base (sin IVA)
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('Subtotal (sin IVA):', style: TextStyle(color: Colors.grey)),
+                        const Text('Precio sin IVA:', style: TextStyle(color: Colors.grey)),
                         Text(
                           VatHelper.formatEur(cartTotal),
                           style: const TextStyle(fontSize: 14, color: Colors.grey),
@@ -529,7 +568,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen>
                       ],
                     ),
                     const SizedBox(height: 6),
-                    
+
                     // IVA 21%
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -541,23 +580,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen>
                         ),
                       ],
                     ),
-                    const SizedBox(height: 6),
-                    
-                    // Subtotal con IVA
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text('Subtotal (IVA incl.):', style: TextStyle(color: Colors.white70)),
-                        Text(
-                          VatHelper.formatEur(VatHelper.priceWithVat(cartTotal)),
-                          style: const TextStyle(fontSize: 15),
-                        ),
-                      ],
-                    ),
-                    
+
                     // Discount if applied
                     if (_discountAmount > 0) ...[
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 6),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -574,7 +600,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen>
                           Text(
                             '-${VatHelper.formatEur(_discountAmount)}',
                             style: TextStyle(
-                              fontSize: 16,
+                              fontSize: 14,
                               color: Colors.green[400],
                               fontWeight: FontWeight.bold,
                             ),
@@ -582,20 +608,25 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen>
                         ],
                       ),
                     ],
-                    
+
                     const SizedBox(height: 12),
                     const Divider(height: 1, color: Colors.grey),
                     const SizedBox(height: 12),
+
+                    // TOTAL al final (repetido)
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('TOTAL:', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                        const Text(
+                          'TOTAL:',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white70),
+                        ),
                         Text(
                           VatHelper.formatEur(_finalTotal),
-                          style: TextStyle(
-                            fontSize: 28,
+                          style: const TextStyle(
+                            fontSize: 20,
                             fontWeight: FontWeight.bold,
-                            color: AppTheme.accent,
+                            color: Colors.white,
                           ),
                         ),
                       ],
@@ -730,10 +761,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen>
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Colors.blue.withOpacity(0.2),
+                          color: AppTheme.accent.withOpacity(0.15),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Icon(Icons.credit_card, color: Colors.blue, size: 28),
+                        child: const Icon(Icons.credit_card, color: AppTheme.accent, size: 28),
                       ),
                       const SizedBox(width: 16),
                       Expanded(
@@ -979,12 +1010,12 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen>
               dropdownColor: Colors.grey[850],
               icon: const Icon(Icons.keyboard_arrow_down, color: Colors.grey),
               items: const [
-                DropdownMenuItem(value: 'España', child: Text('España 🇪🇸')),
-                DropdownMenuItem(value: 'Portugal', child: Text('Portugal 🇵🇹')),
-                DropdownMenuItem(value: 'Francia', child: Text('Francia 🇫🇷')),
-                DropdownMenuItem(value: 'Italia', child: Text('Italia 🇮🇹')),
-                DropdownMenuItem(value: 'Alemania', child: Text('Alemania 🇩🇪')),
-                DropdownMenuItem(value: 'Reino Unido', child: Text('Reino Unido 🇬🇧')),
+                DropdownMenuItem(value: 'España', child: Text('España')),
+                DropdownMenuItem(value: 'Portugal', child: Text('Portugal')),
+                DropdownMenuItem(value: 'Francia', child: Text('Francia')),
+                DropdownMenuItem(value: 'Italia', child: Text('Italia')),
+                DropdownMenuItem(value: 'Alemania', child: Text('Alemania')),
+                DropdownMenuItem(value: 'Reino Unido', child: Text('Reino Unido')),
                 DropdownMenuItem(value: 'Otro', child: Text('Otro país')),
               ],
               onChanged: (v) => setState(() => _country = v!),

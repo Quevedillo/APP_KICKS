@@ -32,7 +32,7 @@ class EmailSenderWidget extends ConsumerWidget {
   Future<void> _sendEmail(BuildContext context, WidgetRef ref) async {
     if (emailTo.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('❌ Email inválido')),
+        const SnackBar(content: Text('Email inválido')),
       );
       return;
     }
@@ -48,18 +48,18 @@ class EmailSenderWidget extends ConsumerWidget {
 
       if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('✅ Email enviado correctamente')),
+          const SnackBar(content: Text('Email enviado correctamente'), backgroundColor: Colors.green),
         );
         onSuccess?.call();
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('❌ Error al enviar email')),
+          const SnackBar(content: Text('Error al enviar email'), backgroundColor: Colors.red),
         );
         onError?.call();
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('❌ Error: $e')),
+        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
       );
       onError?.call();
     }
@@ -106,7 +106,7 @@ Future<void> showEmailDialog(BuildContext context) {
   return showDialog(
     context: context,
     builder: (context) => AlertDialog(
-      title: const Text('✉️ Enviar Email'),
+      title: const Text('Enviar Email'),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -160,7 +160,7 @@ Future<void> showEmailDialog(BuildContext context) {
                 subjectController.text.isEmpty ||
                 contentController.text.isEmpty) {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('❌ Por favor completa todos los campos')),
+                const SnackBar(content: Text('Por favor completa todos los campos'), backgroundColor: Colors.orange),
               );
               return;
             }
@@ -176,12 +176,12 @@ Future<void> showEmailDialog(BuildContext context) {
 
             if (success) {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('✅ Email enviado')),
+                const SnackBar(content: Text('Email enviado'), backgroundColor: Colors.green),
               );
               Navigator.pop(context);
             } else {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('❌ Error al enviar')),
+                const SnackBar(content: Text('Error al enviar'), backgroundColor: Colors.red),
               );
             }
 

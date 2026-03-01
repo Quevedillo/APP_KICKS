@@ -538,7 +538,7 @@ class _OrderStatusRow extends StatelessWidget {
   Color _getStatusColor(String status) {
     switch (status) {
       case 'completed': return Colors.green;
-      case 'processing': return Colors.blue;
+      case 'processing': return Colors.orange;
       case 'pending': return Colors.orange;
       case 'paid': return Colors.teal;
       case 'cancelled': return Colors.red;
@@ -783,7 +783,7 @@ class _AdminOrdersMobileState extends ConsumerState<AdminOrdersMobile> {
         return Colors.orange;
       case 'shipped':
       case 'delivered':
-        return Colors.blue;
+        return Colors.teal;
       case 'cancelled':
       case 'failed':
         return Colors.red;
@@ -1082,7 +1082,7 @@ class _OrderDetailSheetState extends ConsumerState<_OrderDetailSheet> {
         return Colors.orange;
       case 'shipped':
       case 'delivered':
-        return Colors.blue;
+        return Colors.teal;
       case 'cancelled':
       case 'failed':
         return Colors.red;
@@ -1595,7 +1595,7 @@ class _OrderDetailSheetState extends ConsumerState<_OrderDetailSheet> {
         : '';
 
     final templates = {
-      'Enviado 📦': '''Hola $name,
+      'Enviado': '''Hola $name,
 
 Tu pedido $id ha sido enviado. Recibirás el código de seguimiento en breve.
 
@@ -1605,7 +1605,7 @@ $itemsList
 Importe total: $totalStr€
 
 ¡Gracias por confiar en KicksPremium!''',
-      'Reembolso 💸': '''Hola $name,
+      'Reembolso': '''Hola $name,
 
 Tu pedido $id ha sido reembolsado.
 
@@ -1616,7 +1616,7 @@ Importe reembolsado: $refundAmount€$shippingNote
 El importe tardará entre 3-5 días hábiles en reflejarse en tu cuenta.
 
 Lamentamos los inconvenientes.''',
-      'Cancelación ❌': '''Hola $name,
+      'Cancelación': '''Hola $name,
 
 Tu pedido $id ha sido cancelado.${_order.cancelledReason != null && _order.cancelledReason!.isNotEmpty ? '\n\nMotivo: ${_order.cancelledReason}' : ''}
 
@@ -3917,8 +3917,8 @@ class _ProductFormDialogState extends ConsumerState<_ProductFormDialog> {
               children: [
                 for (final entry in [
                   ('standard', 'Estándar'),
-                  ('new', '✨ Nuevo'),
-                  ('restock', '🔄 Restock'),
+                  ('new', 'Nuevo'),
+                  ('restock', 'Restock'),
                 ])
                   Expanded(
                     child: GestureDetector(

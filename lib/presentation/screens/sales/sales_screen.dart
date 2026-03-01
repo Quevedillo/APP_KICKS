@@ -17,13 +17,13 @@ class SalesScreen extends ConsumerWidget {
   String get _title {
     switch (collection) {
       case 'limited':
-        return '⚡ EDICIONES LIMITADAS';
+        return 'EDICIONES LIMITADAS';
       case 'new':
-        return '✨ NUEVOS LANZAMIENTOS';
+        return 'NUEVOS LANZAMIENTOS';
       case 'restock':
-        return '🔄 RESTOCKS';
+        return 'RESTOCKS';
       default:
-        return '🏷️ OFERTAS';
+        return 'OFERTAS';
     }
   }
 

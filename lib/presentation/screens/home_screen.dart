@@ -173,26 +173,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
                       children: const [
-                        _CollectionCard(
-                          emoji: '⚡',
+                         _CollectionCard(
+                          icon: Icons.bolt,
                           title: 'Ediciones Limitadas',
                           color: Color(0xFF6A0DAD),
                           route: '/sales/limited',
                         ),
                         _CollectionCard(
-                          emoji: '✨',
+                          icon: Icons.new_releases,
                           title: 'Nuevos Lanzamientos',
                           color: Color(0xFF1565C0),
                           route: '/sales/new',
                         ),
                         _CollectionCard(
-                          emoji: '🔄',
+                          icon: Icons.autorenew,
                           title: 'Restocks',
                           color: Color(0xFF1B5E20),
                           route: '/sales/restock',
                         ),
                         _CollectionCard(
-                          emoji: '🏷️',
+                          icon: Icons.local_offer,
                           title: 'Ofertas',
                           color: Color(0xFFB71C1C),
                           route: '/sales',
@@ -429,13 +429,13 @@ class _UspItem extends StatelessWidget {
 
 /// Tarjeta de colección para la pantalla principal
 class _CollectionCard extends StatelessWidget {
-  final String emoji;
+  final IconData icon;
   final String title;
   final Color color;
   final String route;
 
   const _CollectionCard({
-    required this.emoji,
+    required this.icon,
     required this.title,
     required this.color,
     required this.route,
@@ -456,13 +456,14 @@ class _CollectionCard extends StatelessWidget {
         ),
         child: Stack(
           children: [
-            // Big emoji background
+            // Big icon background
             Positioned(
-              right: -6,
-              bottom: -6,
-              child: Text(
-                emoji,
-                style: const TextStyle(fontSize: 44),
+              right: -4,
+              bottom: -4,
+              child: Icon(
+                icon,
+                size: 52,
+                color: Colors.white.withOpacity(0.15),
               ),
             ),
             // Text
@@ -472,11 +473,8 @@ class _CollectionCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(
-                    emoji,
-                    style: const TextStyle(fontSize: 16),
-                  ),
-                  const SizedBox(height: 2),
+                  Icon(icon, size: 18, color: Colors.white),
+                  const SizedBox(height: 4),
                   Text(
                     title,
                     style: const TextStyle(
