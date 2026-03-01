@@ -8,6 +8,7 @@ import '../../../data/models/order.dart';
 import '../../../data/models/product.dart';
 import '../../../data/models/category.dart';
 import '../../../data/models/discount_code.dart';
+import '../../../data/models/user_profile.dart';
 import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:image_picker/image_picker.dart';
@@ -1854,63 +1855,526 @@ class AdminProductsMobile extends ConsumerWidget {
 }
 
 // ========== USERS MOBILE ==========
-class AdminUsersMobile extends ConsumerWidget {
+class AdminUsersMobile extends ConsumerStatefulWidget {
   const AdminUsersMobile({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AdminUsersMobile> createState() => _AdminUsersMobileState();
+}
+
+class _AdminUsersMobileState extends ConsumerState<AdminUsersMobile> {
+  String _searchQuery = '';
+  String _filterType = 'all'; // all, admin, banned
+
+  @override
+  Widget build(BuildContext context) {
     final usersAsync = ref.watch(adminAllUsersProvider);
 
     return usersAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (err, stack) => Center(child: Text('Error: $err')),
-      data: (users) => ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: users.length,
-        itemBuilder: (context, index) {
-          final user = users[index];
-          return Container(
-            margin: const EdgeInsets.only(bottom: 8),
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.grey[900],
-              borderRadius: BorderRadius.circular(12),
+      loading: () => const Center(child: CircularProgressIndicator(color: AppTheme.red)),
+      error: (err, stack) => Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.error_outline, color: AppTheme.red, size: 48),
+            const SizedBox(height: 12),
+            Text('Error: $err', style: const TextStyle(color: Colors.grey)),
+            const SizedBox(height: 12),
+            ElevatedButton(
+              onPressed: () => ref.invalidate(adminAllUsersProvider),
+              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.red),
+              child: const Text('Reintentar'),
             ),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  backgroundColor: user.isAdmin ? Colors.red[700] : AppTheme.accent,
-                  child: Text(
-                    user.fullName != null && user.fullName!.isNotEmpty 
-                        ? user.fullName![0].toUpperCase() 
-                        : 'U', 
-                    style: const TextStyle(color: Colors.black)
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+          ],
+        ),
+      ),
+      data: (users) {
+        // Filtrar usuarios
+        var filtered = users.where((u) {
+          if (_filterType == 'admin') return u.isAdmin;
+          if (_filterType == 'banned') return u.isBanned;
+          return true;
+        }).where((u) {
+          if (_searchQuery.isEmpty) return true;
+          final q = _searchQuery.toLowerCase();
+          return u.email.toLowerCase().contains(q) ||
+              (u.fullName?.toLowerCase().contains(q) ?? false);
+        }).toList();
+
+        final totalUsers = users.length;
+        final adminCount = users.where((u) => u.isAdmin).length;
+        final bannedCount = users.where((u) => u.isBanned).length;
+
+        return Column(
+          children: [
+            // Header con stats
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(user.fullName ?? 'Sin nombre', style: const TextStyle(fontWeight: FontWeight.bold)),
-                      Text(user.email, style: TextStyle(fontSize: 12, color: Colors.grey[400])),
-                      if (user.isAdmin)
-                        Text('ADMINISTRADOR', style: TextStyle(fontSize: 9, color: Colors.red[400], fontWeight: FontWeight.bold)),
+                      const Text('Usuarios', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                      IconButton(
+                        icon: const Icon(Icons.refresh, color: AppTheme.accent),
+                        onPressed: () => ref.invalidate(adminAllUsersProvider),
+                      ),
                     ],
                   ),
+                  const SizedBox(height: 12),
+                  // Stats row
+                  Row(
+                    children: [
+                      _UserStatChip(label: 'Total', count: totalUsers, color: AppTheme.accent, isSelected: _filterType == 'all', onTap: () => setState(() => _filterType = 'all')),
+                      const SizedBox(width: 8),
+                      _UserStatChip(label: 'Admins', count: adminCount, color: AppTheme.red, isSelected: _filterType == 'admin', onTap: () => setState(() => _filterType = 'admin')),
+                      const SizedBox(width: 8),
+                      _UserStatChip(label: 'Deshabilitados', count: bannedCount, color: Colors.orange, isSelected: _filterType == 'banned', onTap: () => setState(() => _filterType = 'banned')),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  // Search
+                  TextField(
+                    onChanged: (v) => setState(() => _searchQuery = v),
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      hintText: 'Buscar por nombre o email...',
+                      hintStyle: TextStyle(color: Colors.grey[600]),
+                      filled: true,
+                      fillColor: const Color(0xFF1C1C1C),
+                      prefixIcon: Icon(Icons.search, color: Colors.grey[500]),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                ],
+              ),
+            ),
+            // Users list
+            Expanded(
+              child: filtered.isEmpty
+                  ? Center(
+                      child: Text('No se encontraron usuarios',
+                          style: TextStyle(color: Colors.grey[500])),
+                    )
+                  : RefreshIndicator(
+                      color: AppTheme.red,
+                      onRefresh: () async => ref.invalidate(adminAllUsersProvider),
+                      child: ListView.builder(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: filtered.length,
+                        itemBuilder: (context, index) {
+                          final user = filtered[index];
+                          return _UserCard(
+                            user: user,
+                            onToggleAdmin: () => _confirmToggleAdmin(user),
+                            onToggleBan: () => _confirmToggleBan(user),
+                            onDelete: () => _confirmDelete(user),
+                          );
+                        },
+                      ),
+                    ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _confirmToggleAdmin(UserProfile user) async {
+    final action = user.isAdmin ? 'quitar permisos de administrador a' : 'hacer administrador a';
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1C1C1C),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(user.isAdmin ? 'Quitar Admin' : 'Hacer Admin',
+            style: const TextStyle(color: Colors.white)),
+        content: Text('¿Seguro que quieres $action ${user.email}?',
+            style: const TextStyle(color: Colors.grey)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: user.isAdmin ? Colors.orange : AppTheme.red,
+            ),
+            child: Text(user.isAdmin ? 'Quitar Admin' : 'Hacer Admin'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      final success = await ref.read(adminRepositoryProvider).toggleAdmin(user.id, !user.isAdmin);
+      if (mounted) {
+        ref.invalidate(adminAllUsersProvider);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(success
+              ? (user.isAdmin ? 'Permisos de admin retirados' : 'Usuario promovido a admin')
+              : 'Error al cambiar permisos'),
+          backgroundColor: success ? Colors.green : Colors.red,
+          duration: const Duration(seconds: 3),
+        ));
+      }
+    }
+  }
+
+  Future<void> _confirmToggleBan(UserProfile user) async {
+    final action = user.isBanned ? 'habilitar' : 'deshabilitar';
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1C1C1C),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(user.isBanned ? 'Habilitar Usuario' : 'Deshabilitar Usuario',
+            style: const TextStyle(color: Colors.white)),
+        content: Text(
+          user.isBanned
+              ? '¿Quieres volver a habilitar a ${user.email}? Podrá volver a iniciar sesión.'
+              : '¿Seguro que quieres $action a ${user.email}? No podrá iniciar sesión.',
+          style: const TextStyle(color: Colors.grey),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: user.isBanned ? Colors.green : Colors.orange,
+            ),
+            child: Text(user.isBanned ? 'Habilitar' : 'Deshabilitar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      final repo = ref.read(adminRepositoryProvider);
+      final success = user.isBanned
+          ? await repo.unbanUser(user.id)
+          : await repo.banUser(user.id);
+      if (mounted) {
+        ref.invalidate(adminAllUsersProvider);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(success
+              ? (user.isBanned ? 'Usuario habilitado' : 'Usuario deshabilitado')
+              : 'Error al cambiar estado'),
+          backgroundColor: success ? Colors.green : Colors.red,
+          duration: const Duration(seconds: 3),
+        ));
+      }
+    }
+  }
+
+  Future<void> _confirmDelete(UserProfile user) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1C1C1C),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Eliminar Usuario', style: TextStyle(color: Colors.red)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('¿Seguro que quieres eliminar permanentemente a ${user.email}?',
+                style: const TextStyle(color: Colors.grey)),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.red.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.warning_amber, color: Colors.red, size: 18),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text('Esta acción es irreversible. Se eliminará de la base de datos.',
+                        style: TextStyle(color: Colors.red, fontSize: 12)),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      final success = await ref.read(adminRepositoryProvider).deleteUser(user.id);
+      if (mounted) {
+        ref.invalidate(adminAllUsersProvider);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(success
+              ? 'Usuario eliminado permanentemente'
+              : 'Error al eliminar usuario'),
+          backgroundColor: success ? Colors.green : Colors.red,
+          duration: const Duration(seconds: 3),
+        ));
+      }
+    }
+  }
+}
+
+class _UserStatChip extends StatelessWidget {
+  final String label;
+  final int count;
+  final Color color;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _UserStatChip({
+    required this.label,
+    required this.count,
+    required this.color,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+          decoration: BoxDecoration(
+            color: isSelected ? color.withValues(alpha: 0.2) : const Color(0xFF1C1C1C),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: isSelected ? color : Colors.transparent,
+              width: 1.5,
+            ),
+          ),
+          child: Column(
+            children: [
+              Text('$count',
+                  style: TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.bold, color: color)),
+              Text(label,
+                  style: TextStyle(fontSize: 10, color: Colors.grey[400]),
+                  overflow: TextOverflow.ellipsis),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _UserCard extends StatelessWidget {
+  final UserProfile user;
+  final VoidCallback onToggleAdmin;
+  final VoidCallback onToggleBan;
+  final VoidCallback onDelete;
+
+  const _UserCard({
+    required this.user,
+    required this.onToggleAdmin,
+    required this.onToggleBan,
+    required this.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1C1C1C),
+        borderRadius: BorderRadius.circular(14),
+        border: user.isBanned
+            ? Border.all(color: Colors.orange.withValues(alpha: 0.4), width: 1)
+            : user.isAdmin
+                ? Border.all(color: AppTheme.red.withValues(alpha: 0.3), width: 1)
+                : null,
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              // Avatar
+              CircleAvatar(
+                radius: 22,
+                backgroundColor: user.isBanned
+                    ? Colors.grey[700]
+                    : user.isAdmin
+                        ? AppTheme.red
+                        : AppTheme.accent,
+                child: Text(
+                  user.fullName != null && user.fullName!.isNotEmpty
+                      ? user.fullName![0].toUpperCase()
+                      : user.email[0].toUpperCase(),
+                  style: const TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
                 ),
-                PopupMenuButton(
-                  icon: const Icon(Icons.more_vert, color: Colors.grey),
-                  itemBuilder: (context) => [
-                    const PopupMenuItem(child: Text('Ver Perfil')),
-                    const PopupMenuItem(child: Text('Editar')),
-                    const PopupMenuItem(child: Text('Suspender')),
+              ),
+              const SizedBox(width: 12),
+              // Info
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            user.fullName ?? 'Sin nombre',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                              color: user.isBanned ? Colors.grey : Colors.white,
+                              decoration: user.isBanned ? TextDecoration.lineThrough : null,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        if (user.isAdmin)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: AppTheme.red.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const Text('ADMIN',
+                                style: TextStyle(
+                                    fontSize: 9,
+                                    color: AppTheme.red,
+                                    fontWeight: FontWeight.bold)),
+                          ),
+                        if (user.isBanned) ...[
+                          const SizedBox(width: 4),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.orange.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const Text('DESHABILITADO',
+                                style: TextStyle(
+                                    fontSize: 9,
+                                    color: Colors.orange,
+                                    fontWeight: FontWeight.bold)),
+                          ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Text(user.email,
+                        style: TextStyle(fontSize: 12, color: Colors.grey[400]),
+                        overflow: TextOverflow.ellipsis),
+                    if (user.createdAt != null)
+                      Text(
+                        'Registro: ${user.createdAt!.day}/${user.createdAt!.month}/${user.createdAt!.year}',
+                        style: TextStyle(fontSize: 10, color: Colors.grey[600]),
+                      ),
                   ],
                 ),
-              ],
-            ),
-          );
-        },
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          // Action buttons
+          Row(
+            children: [
+              // Toggle admin
+              Expanded(
+                child: _UserActionButton(
+                  icon: user.isAdmin ? Icons.admin_panel_settings : Icons.admin_panel_settings_outlined,
+                  label: user.isAdmin ? 'Quitar Admin' : 'Hacer Admin',
+                  color: user.isAdmin ? Colors.orange : AppTheme.red,
+                  onTap: onToggleAdmin,
+                ),
+              ),
+              const SizedBox(width: 6),
+              // Toggle ban
+              Expanded(
+                child: _UserActionButton(
+                  icon: user.isBanned ? Icons.lock_open : Icons.block,
+                  label: user.isBanned ? 'Habilitar' : 'Deshabilitar',
+                  color: user.isBanned ? Colors.green : Colors.orange,
+                  onTap: onToggleBan,
+                ),
+              ),
+              const SizedBox(width: 6),
+              // Delete
+              Expanded(
+                child: _UserActionButton(
+                  icon: Icons.delete_forever,
+                  label: 'Eliminar',
+                  color: Colors.red,
+                  onTap: onDelete,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _UserActionButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _UserActionButton({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: color.withValues(alpha: 0.3)),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: color, size: 18),
+            const SizedBox(height: 2),
+            Text(label,
+                style: TextStyle(fontSize: 9, color: color, fontWeight: FontWeight.bold),
+                overflow: TextOverflow.ellipsis),
+          ],
+        ),
       ),
     );
   }

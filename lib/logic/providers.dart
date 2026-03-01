@@ -1,3 +1,4 @@
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../data/repositories/product_repository.dart';
@@ -37,8 +38,15 @@ final emailRepositoryProvider = Provider<EmailRepository>((ref) {
   return EmailRepository();
 });
 
+/// Cliente Supabase con service_role key para operaciones de admin (bypasa RLS)
+final supabaseServiceRoleProvider = Provider<SupabaseClient>((ref) {
+  final url = dotenv.env['PUBLIC_SUPABASE_URL'] ?? '';
+  final serviceKey = dotenv.env['SUPABASE_SERVICE_ROLE_KEY'] ?? '';
+  return SupabaseClient(url, serviceKey);
+});
+
 final adminRepositoryProvider = Provider<AdminRepository>((ref) {
-  return AdminRepository(ref.watch(supabaseClientProvider));
+  return AdminRepository(ref.watch(supabaseServiceRoleProvider));
 });
 
 final discountRepositoryProvider = Provider<DiscountRepository>((ref) {

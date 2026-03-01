@@ -1,4 +1,7 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart' hide Category;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/order.dart';
 import '../models/product.dart';
@@ -638,21 +641,10 @@ class AdminRepository {
   // ========== USERS MANAGEMENT ==========
 
   /// Obtiene todos los usuarios (usando RPC para bypasear RLS si existe, o query directa)
+  /// Obtiene todos los usuarios con estado de autenticación (ban)
   Future<List<UserProfile>> getAllUsers() async {
     try {
-      // Intentar usar la función RPC que bypasa RLS
-      try {
-        final data = await _client.rpc('get_all_user_profiles');
-        if (data != null && data is List && data.isNotEmpty) {
-          return data
-              .map((e) => UserProfile.fromJson(e as Map<String, dynamic>))
-              .toList();
-        }
-      } catch (_) {
-        // Si la función RPC no existe, continuar con query directa
-      }
-      
-      // Fallback: query directa (depende de las políticas RLS)
+      // Obtener perfiles de user_profiles
       final data = await _client
           .from('user_profiles')
           .select()
@@ -660,12 +652,141 @@ class AdminRepository {
 
       if (data.isEmpty) return [];
 
-      return (data as List)
+      final profiles = (data as List)
           .map((e) => UserProfile.fromJson(e as Map<String, dynamic>))
           .toList();
+
+      // Obtener estado de ban desde Auth Admin API
+      final bannedIds = await _getBannedUserIds();
+
+      return profiles.map((p) => p.copyWith(
+        isBanned: bannedIds.contains(p.id),
+      )).toList();
     } catch (e) {
-      print('❌ Error fetching all users: $e');
+      debugPrint('❌ Error fetching all users: $e');
       rethrow;
+    }
+  }
+
+  /// Obtiene IDs de usuarios baneados desde Auth Admin API
+  Future<Set<String>> _getBannedUserIds() async {
+    try {
+      final url = dotenv.env['PUBLIC_SUPABASE_URL'] ?? '';
+      final serviceKey = dotenv.env['SUPABASE_SERVICE_ROLE_KEY'] ?? '';
+      if (url.isEmpty || serviceKey.isEmpty) return {};
+
+      final response = await http.get(
+        Uri.parse('$url/auth/v1/admin/users?per_page=1000'),
+        headers: {
+          'Authorization': 'Bearer $serviceKey',
+          'apikey': serviceKey,
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body);
+        final users = body['users'] as List? ?? [];
+        final Set<String> banned = {};
+        for (final u in users) {
+          final bannedUntil = u['banned_until'] as String?;
+          if (bannedUntil != null && bannedUntil != '0001-01-01T00:00:00Z') {
+            final until = DateTime.tryParse(bannedUntil);
+            if (until != null && until.isAfter(DateTime.now())) {
+              banned.add(u['id'] as String);
+            }
+          }
+        }
+        return banned;
+      }
+      return {};
+    } catch (e) {
+      debugPrint('⚠️ Error fetching auth users: $e');
+      return {};
+    }
+  }
+
+  /// Cambia el estado de admin de un usuario
+  Future<bool> toggleAdmin(String userId, bool isAdmin) async {
+    try {
+      await _client.from('user_profiles').update({
+        'is_admin': isAdmin,
+        'updated_at': DateTime.now().toIso8601String(),
+      }).eq('id', userId);
+      return true;
+    } catch (e) {
+      debugPrint('❌ Error toggling admin: $e');
+      return false;
+    }
+  }
+
+  /// Banea (deshabilita) un usuario via Auth Admin API
+  Future<bool> banUser(String userId) async {
+    try {
+      final url = dotenv.env['PUBLIC_SUPABASE_URL'] ?? '';
+      final serviceKey = dotenv.env['SUPABASE_SERVICE_ROLE_KEY'] ?? '';
+
+      final response = await http.put(
+        Uri.parse('$url/auth/v1/admin/users/$userId'),
+        headers: {
+          'Authorization': 'Bearer $serviceKey',
+          'apikey': serviceKey,
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({'ban_duration': '876000h'}),
+      );
+
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint('❌ Error banning user: $e');
+      return false;
+    }
+  }
+
+  /// Desbanea (habilita) un usuario via Auth Admin API
+  Future<bool> unbanUser(String userId) async {
+    try {
+      final url = dotenv.env['PUBLIC_SUPABASE_URL'] ?? '';
+      final serviceKey = dotenv.env['SUPABASE_SERVICE_ROLE_KEY'] ?? '';
+
+      final response = await http.put(
+        Uri.parse('$url/auth/v1/admin/users/$userId'),
+        headers: {
+          'Authorization': 'Bearer $serviceKey',
+          'apikey': serviceKey,
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({'ban_duration': 'none'}),
+      );
+
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint('❌ Error unbanning user: $e');
+      return false;
+    }
+  }
+
+  /// Elimina un usuario completamente (user_profiles + auth.users)
+  Future<bool> deleteUser(String userId) async {
+    try {
+      // 1. Eliminar de user_profiles primero (FK constraint)
+      await _client.from('user_profiles').delete().eq('id', userId);
+
+      // 2. Eliminar de auth.users via Admin API
+      final url = dotenv.env['PUBLIC_SUPABASE_URL'] ?? '';
+      final serviceKey = dotenv.env['SUPABASE_SERVICE_ROLE_KEY'] ?? '';
+
+      final response = await http.delete(
+        Uri.parse('$url/auth/v1/admin/users/$userId'),
+        headers: {
+          'Authorization': 'Bearer $serviceKey',
+          'apikey': serviceKey,
+        },
+      );
+
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint('❌ Error deleting user: $e');
+      return false;
     }
   }
 
@@ -684,7 +805,7 @@ class AdminRepository {
           .map((e) => UserProfile.fromJson(e as Map<String, dynamic>))
           .toList();
     } catch (e) {
-      print('❌ Error fetching admin users: $e');
+      debugPrint('❌ Error fetching admin users: $e');
       rethrow;
     }
   }
@@ -704,7 +825,7 @@ class AdminRepository {
         'regularUsers': (allUsers as List).length - (adminUsers as List).length,
       };
     } catch (e) {
-      print('❌ Error fetching user stats: $e');
+      debugPrint('❌ Error fetching user stats: $e');
       return {
         'totalUsers': 0,
         'adminUsers': 0,
