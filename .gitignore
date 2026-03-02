@@ -49,3 +49,14 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Build logs and analysis output
+analyze_output.txt
+build_log.txt
+build_output.txt
+
+# SQL migrations (already applied)
+*.sql
+
+# Supabase local config
+supabase/.temp/
